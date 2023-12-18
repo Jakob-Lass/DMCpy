@@ -10,6 +10,7 @@ from DMCpy import DataFile, _tools, Viewer3D, RLUAxes, TasUBlibDEG
 from DMCpy.FileStructure import shallowRead, HDFCountsBG, HDFTranslation
 import warnings
 import DMCpy
+from scipy.optimize import curve_fit
 
 class DataSet(object):
     def __init__(self, dataFiles=None,unitCell=None,forcePowder=False,**kwargs):
