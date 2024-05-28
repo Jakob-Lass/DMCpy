@@ -23,13 +23,15 @@ setup(
     author_email='jakob.lass@psi.ch',
     url='https://www.psi.ch/en/sinq/dmc/',
     license='MPL-2.0',
-    data_files = [(pythonPath, ["LICENSE.txt"]),((os.path.join(pythonPath),["DMCpy/calibrationDict.dat"]))],
+    #data_files = [(pythonPath, ["LICENSE.txt"]),((os.path.join(pythonPath),["DMCpy/calibrationDict.dat"]))],
+    include_package_data=True,
+    package_data ={'calibration':['calibrationDict.dat']},
     packages=['DMCpy','DMCpy/CommandLineScripts'],
     entry_points = {
         "console_scripts": ['DMCSpy=DMCpy.CommandLineScripts.DMCS:main'],
         },
     python_requires='>=3.6',
-    install_requires=['matplotlib<3.6','numpy>=1.14','h5py>=2.5','scipy','datetime','pandas','future','crystals',
+    install_requires=['matplotlib','numpy>=1.14','h5py>=2.5','scipy','datetime','pandas','future','crystals',
                     'pip>=20'],
     classifiers=[
         'Development Status :: 3 - Alpha',
