@@ -149,8 +149,8 @@ class InteractiveViewer(object):
         self.ax_thetaIntegrated.set_xlabel(self.ylabel)
         
         # Sum over two theta and alpha(out of plane)
-        self.IThetaIntegrated = self.data.sum(axis=1)
-        self.IAlphaIntegrated = self.data.sum(axis=2)
+        self.IThetaIntegrated = np.nansum(self.data,axis=1)
+        self.IAlphaIntegrated = np.nansum(self.data,axis=2)
         
         if vmin is None:
             vmin = np.nanmin(self.data)
