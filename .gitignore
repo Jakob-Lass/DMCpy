@@ -28,3 +28,4 @@ DMCpy.egg-info/*
 
 coverage_html_report
 Tutorials/tutorialList.txt
+DMCpy/CommandLineScripts/DMCS_backup.py

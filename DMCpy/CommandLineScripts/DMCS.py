@@ -1,42 +1,44 @@
-#import sys
 from DMCpy import DataFile, _tools, DataSet
-#import json
-#import os
 import numpy as np
 import matplotlib.pyplot as plt
 import tkinter as tk
 from tkinter import filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-
-#try:
-#    import IPython
-#    shell = IPython.get_ipython()
-#    shell.enable_matplotlib(gui='qt')
-#except ImportError:
-#    pass
+# new update 17_june_2024
 
 
 class MyGUI:
-    def __init__(self, master):       
+    def __init__(self, master):
+        print('Welcome to DMCSpy!')       
          # Initialize GUI and create input variables
         self.master = master
         master.title("DMCSpy")
 
-        # Variables for storing input values
-                # Variables for getting the DataFiles
-        self.scanNumbers_var = tk.StringVar()
-        self.dataFolder_var = tk.StringVar()
-        self.year_var = tk.StringVar(value='2023')
+        # Variables for storing input values. We need to make the class have attributes which correspond to all of DMCpy inputs.
+        # Those are: 
+        # 1) Variables for obtaining the datafiles
+        # 2) Variables related to the crystalline structure
+        # 3) Variables for the HKL transformation
+        # 4) Variables for 3D viewer
 
-                # Variables needed for the unit cell
-        self.a = tk.DoubleVar(value=12.626)
-        self.b = tk.DoubleVar(value=6.199)
-        self.c = tk.DoubleVar(value=5.923)
+        
+        # Variables for getting the DataFiles
+        self.scanNumbers_var = tk.StringVar()
+        self.dataFolder_var = tk.StringVar(value='/home/dmc/data/2024/')
+        self.year_var = tk.StringVar(value='2024')
+        self.Background_var = tk.StringVar()
+
+        # Variables related for the unit cell
+        self.a = tk.DoubleVar()
+        self.b = tk.DoubleVar()
+        self.c = tk.DoubleVar()
         self.alpha = tk.StringVar(value=90)
         self.beta = tk.StringVar(value=90)
         self.gamma = tk.StringVar(value=90)
-                # Variables needed for HKL transformation
+        
+        
+        # Variables needed for HKL transformation
         self.Q1x = tk.DoubleVar(value=-4.126)
         self.Q2x = tk.DoubleVar(value=+2.166)
         self.Q1y = tk.DoubleVar(value=-2.240)
@@ -44,22 +46,23 @@ class MyGUI:
         self.Q1z = tk.DoubleVar(value=-0.285)
         self.Q2z = tk.DoubleVar(value=+0.165)
 
-        self.H1 = tk.DoubleVar(value=0)
+        self.H1 = tk.DoubleVar(value=1)
         self.H2 = tk.DoubleVar(value=0)
-        self.K1 = tk.DoubleVar(value=2)
-        self.K2 = tk.DoubleVar(value=0)
-        self.L1 = tk.DoubleVar(value=-4)
-        self.L2 = tk.DoubleVar(value=2)
+        self.K1 = tk.DoubleVar(value=0)
+        self.K2 = tk.DoubleVar(value=1)
+        self.L1 = tk.DoubleVar(value=0)
+        self.L2 = tk.DoubleVar(value=0)
 
-                # Variables needed for3D veiwer
+        # Variables needed for3D veiwer
         self.xbinsize = tk.StringVar(value=0.015)
         self.ybinsize = tk.StringVar(value=0.015)
         self.zbinsize = tk.StringVar(value=0.04)
         self.hkl = tk.IntVar() #toggles whether we use hkl or Q_x,y,z
 
-        self.Background_var = tk.StringVar()
+    
 
-        # Create input Widgets and Buttons
+
+        # Create input Widgets and Buttons - these are the things we actually interact with or labels on the GUI.
         tk.Label(master, text="Numors:").grid(row=1, column=0)
         tk.Entry(master, textvariable=self.scanNumbers_var).grid(row=1, column=1)
 
@@ -69,6 +72,10 @@ class MyGUI:
         tk.Label(master, text="Data Folder:").grid(row=3, column=0)
         tk.Entry(master, textvariable=self.dataFolder_var).grid(row=3, column=1)
         tk.Button(master, text="Browse", command=self.browse_data_folder).grid(row=3, column=2)
+
+        tk.Button(master, text="Load Project", command=self.Load_settings).grid(row=1, column=2)
+        tk.Button(master, text="Save Project", command=self.Save_settings).grid(row=2, column=2)
+
 
         tk.Label(master, text="Year:").grid(row=4, column=0)
         tk.Entry(master, textvariable=self.year_var).grid(row=4, column=1)
@@ -162,7 +169,7 @@ class MyGUI:
         self.Viewer_3D_axis_2 = tk.StringVar(value ='010')
 
 
-        # Advances functons: 
+        # Advanced functons: 
         # Export data 3D | Plot plane 2D | Plot Cut 1D
 
         # Buttons for the Adv. Functions
@@ -175,7 +182,7 @@ class MyGUI:
         
         # Variables for the Adv. Functions
 
-    def Export_3D_data(self):
+    def Export_3D_data(self): # These functions below tell us what to do when we click a button.
         # Create a new window for settings
         self.settings_window = tk.Toplevel(self.master)
         self.settings_window.title("Export 3D Data Settings")
@@ -201,6 +208,44 @@ class MyGUI:
         tk.Button(self.settings_window, text="Close",
                    command=self.apply_settings).grid(row=3, column=2)
 
+    def Save_settings(self):
+        file_path = filedialog.asksaveasfilename(defaultextension=".npy", filetypes=[("Text files", "*.npy"), ("All files", "*.*")])
+        if file_path:
+            value_dict = self.Get_values()
+            np.save(file_path, value_dict, allow_pickle=True)
+            print('Project saved! ')
+        else:
+            print('No savefile given')
+            
+
+    def Get_values(self):
+        value_dict = {}
+        attribs = vars(self)
+        for i in attribs:
+            try: 
+                value_dict[str(i)] = attribs[i].get()
+            except:
+                if i != 'master':
+                    print('Error with attribute: ', i)
+        return(value_dict)
+
+    def Load_settings(self):
+        file_path = filedialog.askopenfilename(defaultextension=".npy", filetypes=[("Text files", "*.npy"), ("All files", "*.*")])
+        new_vals = np.load(file_path, allow_pickle=True).tolist()
+        attribs = vars(self)
+        for i in attribs:
+            if i != 'master':
+                try:
+                    attribs[i].set(new_vals[i])
+                except Exception as error:
+                    print('error with attribute: ', str(i))
+                    print(error)
+                    print()
+        print('loaded')
+
+    def Set_values(self, newvals):
+        print('I try set values :)')
+
     def Data3D_Export(self):
 
         print('Exporting the 3D Data')
@@ -219,8 +264,6 @@ class MyGUI:
         np.save(self.scanNumbers_var.get()+'_Cut3D_Errors.npy', errors)
         print('Cut3D Saved\n!')
         
-
-
     def Cut_1D_Line(self):
         # Create a new window for 1D LineCut Settings
 
