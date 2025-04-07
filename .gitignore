@@ -22,6 +22,7 @@ data/*
 
 .*/
 DMCpy.egg-info/*
+src/DMCPy.egg-info/*
 
 .coverage*
 */.coverage*

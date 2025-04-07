@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "DMCpy"
+version = "1.0.1"
+dependencies = [
+  "matplotlib>=3",
+  "numpy>=1.14",
+  "h5py>=2.5",
+  "scipy>=1.7",
+  "datetime",
+  "pandas",
+  "future"
+]
+requires-python = ">=3.6"
+authors = [
+  {name = "Jakob Lass", email = "jakob.lass@psi.ch"},
+  {name = "Moody Samuel Harrison", email = "samuel.moody@psi.ch"},
+  {name = "Øystein Slagtern Fjellvåg ", email = "oystein.fjellvag@ife.no"}, 
+]
+maintainers = [
+  {name = "Jakob Lass", email = "jakob.lass@psi.ch"},
+  {name = "Moody Samuel Harrison", email = "samuel.moody@psi.ch"},
+]
+description = "Python software packaged designed for reduction of neutron powder and single crystal diffraction data from DMC at PSI."
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Education",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Topic :: Scientific/Engineering :: Visualization",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.6",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+  "Operating System :: OS Independent"
+]
+
+[project.urls]
+Homepage = "https://www.psi.ch/en/sinq/dmc/"
+Documentation = "https://DMCpy.readthedocs.org"
+Repository = "https://github.com/Jakob-Lass/DMCPy.git"
+"Bug Tracker" = "https://github.com/Jakob-Lass/DMCPy/issues"
+
+[project.scripts]
+DMCSpy = "DMCpy.CommandLineScripts.DMCS:main"
+
+[tool.setuptools.package-data]
+DMCpy = ["src/*.dat"]
+
+

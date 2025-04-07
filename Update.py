@@ -29,18 +29,18 @@ else:
 print('Updating to version ',version)
 
 # update to new version in setup.py
-with open('setup.py') as f:
+with open('pyproject.toml') as f:
 	lines = f.readlines()
 	writeLines = ''
 	for l in lines:
-		if l.find("    version='")!=-1:
-			l ="    version='"+version+"',\n"
+		if l.find('version = "')!=-1:
+			l ='version = "'+version+'"\n'
 		writeLines+=l
 			
-with open('setup.py','w') as f:
+with open('pyproject.toml','w') as f:
 	f.write(writeLines)
 
-with open('DMCpy/__init__.py') as f:
+with open('src/__init__.py') as f:
 	lines = f.readlines()
 	writeLines = ''
 	for l in lines:
@@ -49,7 +49,7 @@ with open('DMCpy/__init__.py') as f:
 			l = l[:idx] + "__version__ = '"+version+"'\n"
 		writeLines+=l
         
-with open('DMCpy/__init__.py','w') as f:
+with open('src/__init__.py','w') as f:
 	f.write(writeLines)
 
 with open('docs/conf.py') as f:

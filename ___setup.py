@@ -24,8 +24,8 @@ setup(
     url='https://www.psi.ch/en/sinq/dmc/',
     license='MPL-2.0',
     data_files = [(pythonPath, ["LICENSE.txt"])],
-    packages=['DMCpy','DMCpy/CommandLineScripts'],
-    package_data={"DMCpy": ["*.dat"]},
+    #packages=['DMCpy','src/CommandLineScripts'],
+    package_data={"src": ["*.dat"]},
     entry_points = {
         "console_scripts": ['DMCSpy=DMCpy.CommandLineScripts.DMCS:main'],
         },

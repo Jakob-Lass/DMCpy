@@ -40,7 +40,7 @@ def makeHTML():
     os.system("sphinx-build docs build")
 
 def makeWheel():
-    os.system("python setup.py sdist")
+    os.system("python -m build --sdist")
 
 def getLatestBuild():
     list_of_files = glob.glob(os.path.join('dist','*')) # * means all if need specific format then *.csv
@@ -125,13 +125,12 @@ elif args.task.lower() == 'version':
     print('Creating version '+version)
     update(version=version)
     makeTutorials()
-    addFiles = ['setup.py',
+    addFiles = ['pyptoject.toml',
                 os.path.join('docs','conf.py'),
                 os.path.join('docs','Tutorials','*'),
                 os.path.join('docs','index.rst'),
-                os.path.join('DMCpy','__init__.py'),
+                os.path.join('src','__init__.py'),
                 os.path.join('test','init.py'),
-                'setup.py',
                 ]
     os.system("git add {}".format(' '.join(addFiles)))
     os.system("git commit -m \"Update version\"")
