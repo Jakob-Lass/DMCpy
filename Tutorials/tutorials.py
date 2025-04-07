@@ -43,6 +43,8 @@ mainText = """.. _Tutorials:
 
 Tutorials
 ---------
+Below is a list of tutorials highlighting the capabilities of DMCpy in regards to a variety of different applications. It ranges from an overall explanation 
+of how to generate *DataFile* and *DataSet* objects over direct plotting of the detector images to generation of the UB matrix, cuts and background subtraction. 
 Main text about the tutorials below..
 
 .. toctree::

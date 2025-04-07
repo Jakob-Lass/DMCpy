@@ -17,8 +17,8 @@ These are viewed as major packages where support and an ongoing development is e
 
 The package can be installed using the Python Package manager `PyPI <https://pypi.org/>`_. The recommended way as follows:
 
-1. Install Anaconda or miniconda as explained on the (`Anaconda Web Page <https://www.anaconda.com/>`_) with the downloads found (`Anaconda Download <https://www.anaconda.com/products/individual>`_) or according to your institution
-2. In either the AnacondaPrompt or through the Anaconda Navigator create a custom environment
+1. Install Conda or miniconda as explained on the (`Conda Web Page <https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html/>`_) with the downloads found (`Anaconda Download <https://www.anaconda.com/products/individual>`_) or according to your institution
+2. In either the Prompt or through the Navigator create a custom environment
 
    * In the prompt write :code:`conda create -n DMCpy python=3.9` where the name of the environment is chosen to be *DMCpy* and python version 3.9. See documentation main page for currently supported python versions
    * Or in the navigator, click the *Environments* tab and then *create*. In the *Create new environment* choose a name, e.g. *DMCpy*, and a python version, e.g. 3.9.
