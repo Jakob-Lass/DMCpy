@@ -1,4 +1,4 @@
-
+# SPDX-License-Identifier: MPL-2.0
 import warnings
 import sys
 import matplotlib.gridspec

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import numpy as np

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
 #import sys
 from DMCpy import DataFile, _tools, DataSet
 #import json

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
 import h5py as hdf
 import numpy as np
 import pickle as pickle

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
 from cmath import acos
 import numpy as np
 from DMCpy import _tools

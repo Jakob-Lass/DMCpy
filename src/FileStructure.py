@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
 import numpy as np
 from collections import defaultdict
 import warnings, os

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MPL-2.0
 import argparse
 
 OpossibleArguments = ['Nope','None','I don\'t know']
