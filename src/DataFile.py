@@ -131,7 +131,6 @@ def getInstrument(file):
 def loadDataFile(fileLocation=None,fileType='Unknown',unitCell=None,forcePowder=False,**kwargs):
     """Load DMC data file, either powder or single crystal data.
     
-    
     """
     if fileLocation is None:
         return DataFile()
@@ -219,7 +218,7 @@ class DataFile(object):
     def __init__(self, file=None,unitCell=None,forcePowder=False):
         self.fileType = 'DataFile'
         self._twoThetaOffset = 0.0
-        self.monochromatorDistance = 2.82 # <----------------- CHECK
+        self.monochromatorDistance = 2.82 # 
         self._counts = None
         self._background = None
 
@@ -536,6 +535,8 @@ class DataFile(object):
 
             - All other key word arguments are passed on to plotting routine
 
+        Returns:
+            - ax (matplotlib axis): axis into which the detector is potted
         """
 
         if ax is None:

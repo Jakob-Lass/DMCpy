@@ -9,9 +9,9 @@ import os, copy
 import json, os, time
 from DMCpy import DataFile, _tools, Viewer3D, RLUAxes, TasUBlibDEG
 from DMCpy.FileStructure import shallowRead, HDFCountsBG, HDFTranslation
+from DMCpy._tools import gauss, gauss_fit
 import warnings
 import DMCpy
-from scipy.optimize import curve_fit
 
 class DataSet(object):
     def __init__(self, dataFiles=None,unitCell=None,forcePowder=False,**kwargs):
@@ -83,8 +83,6 @@ class DataSet(object):
         except IndexError:
             raise IndexError('Provided index {} is out of bounds for DataSet with length {}.'.format(index,len(self)))
 
-    def __len__(self):
-        return len(self.dataFiles)
     
     def __iter__(self):
         self._index=0
@@ -101,6 +99,8 @@ class DataSet(object):
         return self.__next__()
 
     def append(self,item):
+        """Append data file to data set."""
+
         try:
             if isinstance(item,(str,DataFile.DataFile)): # A file path or DataFile has been provided
                 item = [item]
@@ -113,6 +113,7 @@ class DataSet(object):
         self._getData()
 
     def __delitem__(self,index):
+        """Delete data file by index."""
         if index < len(self.dataFiles):
             del self.dataFiles[index]
         else:
@@ -154,9 +155,7 @@ class DataSet(object):
             - correctedTwoTheta (bool): If true, use corrected two theta, otherwise sum vertically on detector (default True)
         Returns:
             - twoTheta
-            
             - Normalized Intensity
-            
             - Normalized Intensity Error
             - Total Monitor
         """
@@ -244,9 +243,7 @@ class DataSet(object):
         Returns:
             - ax: Matplotlib axis into which data was plotted
             - twoThetaBins
-            
             - normalizedIntensity
-            
             - normalizedIntensityError
             - summedMonitor
         """
@@ -282,294 +279,14 @@ class DataSet(object):
 
         return ax,twoThetaBins, normalizedIntensity, normalizedIntensityError,summedMonitor
 
-    # def plotInteractive(self,ax=None,masking=True,**kwargs):
-    #     """Generate an interactive plot of data.
-    #     Kwargs:
-    #         - ax (axis): Matplotlib axis into which the plot is to be performed (default None -> new)
-    #         - masking (bool): If true, the current mask in self.mask is applied (default True)
-    #         - Kwargs: Passed on to errorbar or imshow depending on data dimensionality
-    #     Returns:
-    #         - ax: Interactive matplotlib axis
-    #     """
-    #     if ax is None:
-    #         fig,ax = plt.subplots()
-    #     else:
-    #         fig = ax.get_figure()
-        
-    #     twoTheta = self.twoTheta
-
-    #     if self.type.lower() in ['singlecrystal','powder']:# TODO: Change
-    #         shape = self.countShape
-            
-    #         intensityMatrix = np.divide(self.counts,self.normalization*self.monitor[:,:,np.newaxis,np.newaxis]).reshape(-1,shape[2],shape[3])
-    #         mask = self.mask.reshape(-1,shape[2],shape[3])
-    #         ax.titles = np.concatenate([[df.fileName]*len(df.A3) for df in self],axis=0)
-    #     else:
-    #         # Find intensity
-    #         intensityMatrix = np.divide(self.counts,self.normalization*self.monitor[:,np.newaxis,np.newaxis])
-    #         mask = self.mask
-            
-
-    #     if masking is True: # If masking, apply self.mask
-    #         intensityMatrix[mask] = np.nan
-
-    #     # Find plotting limits (For 2D pixel limits found later)
-    #     thetaLimits = [f(twoTheta) for f in [np.min,np.max]]
-    #     intLimits = [f(intensityMatrix) for f in [np.nanmin,np.nanmax]]
-
-    #     # Copy relevant data to the axis
-    #     ax.intensityMatrix = intensityMatrix
-    #     ax.intLimits = intLimits
-    #     ax.twoTheta = twoTheta
-    #     ax.twoThetaLimits = thetaLimits
-        
-
-    #     if not hasattr(kwargs,'fmt'):
-    #         kwargs['fmt']='-'
-
-    #     if self.type.upper() == 'OLD DATA': # Data is 1D, plot using errorbar
-    #         ax.titles = [df.fileName for df in self]
-    #         # calculate errorbars
-    #         if 'colorbar' in kwargs: # Cannot be used for 1D plotting....
-    #             del kwargs['colorbar']
-    #         ax.errorbarMatrix = np.divide(np.sqrt(self.counts),self.normalization*self.monitor[:,np.newaxis,np.newaxis])
-    #         def plotSpectrum(ax,index=0,kwargs=kwargs):
-    #             if kwargs is None:
-    #                 kwargs = {}
-    #             if hasattr(ax,'_errorbar'): # am errorbar has already been plotted, delete ot
-    #                 ax._errorbar.remove()
-    #                 del ax._errorbar
-                
-    #             if hasattr(ax,'color'): # use the color from previous plot
-    #                 kwargs['color']=ax.color
-                
-    #             if hasattr(ax,'fmt'):
-    #                 kwargs['fmt']=ax.fmt
-
-    #             # Plot data
-    #             ax._errorbar = ax.errorbar(ax.twoTheta[index],ax.intensityMatrix[index],yerr=ax.errorbarMatrix[index].flatten(),**kwargs)
-    #             ax.fmt = kwargs['fmt']
-    #             ax.index = index # Update index and color
-    #             ax.color = ax._errorbar.lines[0].get_color()
-    #             # Set plotting limits and title
-    #             ax.set_xlim(*ax.twoThetaLimits)
-    #             ax.set_ylim(*ax.intLimits)
-    #             ax.set_title(ax.titles[index])
-    #             plt.draw()
-
-    #             ax.set_ylabel('Inensity [arb]')
-            
-    #     elif self.type.upper() == 'POWDER':
-    #         ax.titles = [df.fileName for df in self]
-    #         # Find limits for y direction
-            
-    #         ax.twoTheta = np.array([df.twoTheta for df in self])
-    #         ax.idxSpans = np.cumsum([len(df.A3) for df in self]) # limits of indices corresponding to data file limits
-    #         ax.IDX = -1 # index of current data file
-    #         ax.twoThetaLimits = [f(ax.twoTheta) for f in [np.nanmin,np.nanmax]]
-    #         ax.pixelLimits = [-0.1,0.1]
-
-    #         def plotSpectrum(ax,index=0,kwargs=kwargs):
-    #             # find color bar limits
-    #             vmin,vmax = ax.intLimits
-
-    #             newIDX = np.sum(index>=ax.idxSpans)
-    #             if newIDX != ax.IDX:
-    #                 ax.IDX = newIDX
-    #                 if hasattr(ax,'_pcolormesh'):
-    #                     ax.cla()
-    #                 ax._pcolormesh = ax.pcolormesh(self.twoTheta[ax.IDX],self.pixelPosition[ax.IDX,2],ax.intensityMatrix[index],shading='auto',vmin=vmin,vmax=vmax)
-                
-    #             elif hasattr(ax,'_pcolormesh'):
-    #                 ax._pcolormesh.set_array(ax.intensityMatrix[index])
-    #             else:
-    #                 ax._pcolormesh = ax.pcolormesh(self.twoTheta[ax.IDX],self.pixelPosition[ax.IDX,2],ax.intensityMatrix[index],shading='auto',vmin=vmin,vmax=vmax)
-
-    #             ax.index = index
-    #             if 'colorbar' in kwargs: # If colorbar attribute is given, use it
-    #                 if kwargs['colorbar']: 
-    #                     if not hasattr(ax,'_colorbar'): # If no colorbar is present, create one
-    #                         ax._colorbar = fig.colorbar(ax._pcolormesh,ax=ax)
-    #             # Set limits
-    #             ax.set_xlim(*ax.twoThetaLimits)
-    #             ax.set_ylim(*ax.pixelLimits)
-    #             ax.set_title(ax.titles[index])
-    #             ax.set_aspect('auto')
-                
-    #             plt.draw()
-                
-    #             ax.set_ylabel('Intensity [arb]')
-
-    #     elif self.type.lower() == 'singlecrystal':
-            
-            
-    #         ax.A3 = np.concatenate([df.A3 for df in self],axis=0)
-    #         ax.twoTheta = np.array([df.twoTheta for df in self])
-    #         ax.idxSpans = np.cumsum([len(df.A3) for df in self]) # limits of indices corresponding to data file limits
-    #         ax.IDX = -1 # index of current data file
-    #         ax.twoThetaLimits = [f(ax.twoTheta) for f in [np.nanmin,np.nanmax]]
-    #         ax.pixelLimits = [-0.1,0.1]
-
-    #         def plotSpectrum(ax,index=0,kwargs=kwargs):
-    #             # find color bar limits
-    #             vmin,vmax = ax.intLimits
-
-    #             newIDX = np.sum(index>=ax.idxSpans)
-    #             if newIDX != ax.IDX:
-    #                 ax.IDX = newIDX
-    #                 if hasattr(ax,'_pcolormesh'):
-    #                     ax.cla()
-    #                 ax._pcolormesh = ax.pcolormesh(self.twoTheta[ax.IDX],self.pixelPosition[ax.IDX,2],ax.intensityMatrix[index],shading='auto',vmin=vmin,vmax=vmax)
-                
-    #             elif hasattr(ax,'_pcolormesh'):
-    #                 ax._pcolormesh.set_array(ax.intensityMatrix[index])
-    #             else:
-    #                 ax._pcolormesh = ax.pcolormesh(self.twoTheta[ax.IDX],self.pixelPosition[ax.IDX,2],ax.intensityMatrix[index],shading='auto',vmin=vmin,vmax=vmax)
-
-                
-    #             ax.index = index
-    #             if 'colorbar' in kwargs: # If colorbar attribute is given, use it
-    #                 if kwargs['colorbar']: 
-    #                     if not hasattr(ax,'_colorbar'): # If no colorbar is present, create one
-    #                         ax._colorbar = fig.colorbar(ax._imshow,ax=ax)
-    #             # Set limits
-    #             ax.set_xlim(*ax.twoThetaLimits)
-    #             ax.set_ylim(*ax.pixelLimits)
-    #             #print(index)
-    #             ax.set_title(ax.titles[index]+' - A3: {:.2f} [deg]'.format(ax.A3[index]))
-    #             ax.set_aspect('auto')
-                
-                
-    #             plt.draw()
-
-            
-    #         ax.set_ylabel(r'Pixel z position [m]')
-
-    #     # For all cases, x axis is two theta in degrees
-    #     ax.set_xlabel(r'2$\theta$ [deg]')
-    #     # Add function as method
-    #     ax.plotSpectrum = lambda index,**kwargs: plotSpectrum(ax,index,**kwargs)
-        
-    #     # Plot first data point
-    #     ax.plotSpectrum(0)
-
-    #     ##### Interactivity #####
-
-    #     def increaseAxis(self,step=1): # Call function to increase index
-    #         index = self.index
-    #         index+=step
-    #         if index>=len(self.intensityMatrix):
-    #             index = len(self.intensityMatrix)-1
-    #         self.plotSpectrum(index)
-            
-    #     def decreaseAxis(self,step=1): # Call function to decrease index
-    #         index = self.index
-    #         index-=step
-    #         if index<=-1:
-    #             index = 0
-    #         self.plotSpectrum(index)
-
-    #     # Connect functions to key presses
-    #     def onKeyPress(self,event): # pragma: no cover
-    #         if event.key in ['+','up']:
-    #             increaseAxis(self)
-    #         elif event.key in ['-','down']:
-    #             decreaseAxis(self)
-    #         elif event.key in ['home']:
-    #             index = 0
-    #             self.plotSpectrum(index)
-    #         elif event.key in ['end']:
-    #             index = len(self.intensityMatrix)-1
-    #             self.plotSpectrum(index)
-    #         elif event.key in ['pageup']: # Pressing page up or page down performs steps of 10
-    #             increaseAxis(self,step=10)
-    #         elif event.key in ['pagedown']:
-    #             decreaseAxis(self,step=10)
-
-    #     # Call function for scrolling with mouse wheel
-    #     def onScroll(self,event): # pragma: no cover
-    #         if(event.button=='up'):
-    #             increaseAxis(self)
-    #         elif event.button=='down':
-    #             decreaseAxis(self)
-    #     # Connect function calls to slots
-    #     fig.canvas.mpl_connect('key_press_event',lambda event: onKeyPress(ax,event) )
-    #     fig.canvas.mpl_connect('scroll_event',lambda event: onScroll(ax,event) )
-        
-    #     return ax
-
-
-    # def plotOverview(self,**kwargs):
-    #     """Quick plotting of data set with interactive plotter and summed intensity.
-    #     Kwargs:
-    #         - masking (bool): If true, the current mask in self.mask is applied (default True)
-    #         - kwargs (dict): Kwargs to be used for interactive or plotTwoTheta plot
-    #     returns:
-    #         - Ax (list): List of two axis, first containing the interactive plot, second summed two theta
-    #     Kwargs for plotInteractiveKwargs:
-        
-    #         - masking (bool): Use generated mask for dataset (default True)
-    #     Kwargs for plotTwoThetaKwargs:
-    #         - twoThetaBins (array): Actual bins used for binning (default [min(twoTheta)-dTheta/2,max(twoTheta)+dTheta/2] in steps of dTheta=0.1 Deg)
-            
-    #         - applyCalibration (bool): Use normalization files (default True)
-            
-    #         - correctedTwoTheta (bool): Use corrected two theta for 2D data (default true)
-        
-    #     """
-
-    #     fig,Ax = plt.subplots(2,1,figsize=(11,9),sharex=True)
-
-    #     Ax = Ax.flatten()
-
-
-    #     if not 'fmt' in kwargs:
-    #         kwargs['fmt']='_'
-
-    #     if not 'masking' in kwargs:
-    #         kwargs['masking']= True
-
-    #     if not 'twoThetaBins' in kwargs:
-    #         kwargs['twoThetaBins']= None
-
-    #     if not 'applyCalibration' in kwargs:
-    #         kwargs['applyCalibration']= True
-
-
-    #     if not 'correctedTwoTheta' in kwargs:
-    #         kwargs['correctedTwoTheta']= True
-
-    #     if not 'colorbar' in kwargs:
-    #         kwargs['colorbar']= False
-
-    #     plotInteractiveKwargs = {}
-    #     for key in ['masking','fmt','colorbar']:
-    #         plotInteractiveKwargs[key] = kwargs[key]
-        
-    #     plotTwoThetaKwargs = {}
-    #     for key in ['twoThetaBins','fmt','correctedTwoTheta','applyCalibration']:
-    #         plotTwoThetaKwargs[key] = kwargs[key]
-
-    #     ax2,*_= self.plotTwoTheta(ax=Ax[1],**plotTwoThetaKwargs)
-    #     ax = self.plotInteractive(ax = Ax[0],**plotInteractiveKwargs)
-
-    #     ax.set_xlabel('')
-    #     ax2.set_title('Integrated Intensity')
-
-    #     fig.tight_layout()
-    #     return Ax
-
     def Viewer3D(self,dqx,dqy,dqz,rlu=True,axis=2, raw=False,  log=False, grid = True, outputFunction=print, 
                  cmap='viridis',smart=False, steps=None, multiplicationFactor=1):
 
         """Generate a 3D view of all data files in the DatSet.
         
         Args:
-        
             - dqx (float): Bin size along first axis in 1/AA
-        
             - dqy (float): Bin size along second axis in 1/AA
-        
             - dqz (float): Bin size along third axis in 1/AA
         Kwargs:
             - rlu (bool): Plot using reciprocal lattice units (default False)
@@ -580,9 +297,7 @@ class DataSet(object):
             - outputFunction (function): Function called when clicking on the figure (default print)
             - cmap (str): Name of color map used for plot (default viridis)
             - multiplicationFactor (float): Multiply intensities with this factor (default 1)
-        
         """
-
         if rlu:
             
             QxQySample = copy.deepcopy(self.sample[0])
@@ -616,7 +331,6 @@ class DataSet(object):
 
             axes = np.asarray(axes,dtype=object)[[2,1,0]]#[rluAxesQyQz,rluAxesQxQz,rluAxesQxQy]
 
-
         else:
             axes = None
 
@@ -626,8 +340,23 @@ class DataSet(object):
 
         return Viewer3D.Viewer3D(Data,bins,axis=axis, ax=axes, grid=grid, log=log, outputFunction=outputFunction, cmap=cmap)
     
-    def binData3D(self,dqx,dqy,dqz,rlu=True,raw=False,smart=False,steps=10):
+    def binData3D(self,dqx,dqy,dqz,rlu=True,raw=False,steps=10):
+        """
+        Bin scattering data in equi-sized bins.
 
+        Args:
+            - dqx (float): bin size along x in 1/AA
+            - dqy (float): bin size along y in 1/AA
+            - dqz (float): bin size along z in 1/AA
+        Kwargs:
+            - rlu (bool): flag to choose if data is rotated into rlu or kept in the instrument coordinate system (default True)
+            - raw (bool): if True, keep scattering numbers un-normalized (default false)
+            - steps (int): number of simultaneously treated scan steps (default 10)
+        Returns:
+            - Intensities (float): Scattering intensity
+            - bins (float): bin edges in 3D
+            - Errors (float): Errors corresponding ot the intensities
+        """
         maximas = []
         minimas = []
         for df in self:
@@ -715,7 +444,6 @@ class DataSet(object):
             - kwargs: All other kwargs are provided to the errorbar plot of the axis
         Returns:
             - Pos,Int,Ax
-            
         """
 
         hkl,I,err = self.cut1D(P1=P1,P2=P2,rlu=rlu,stepSize=stepSize,width=width,widthZ=widthZ,raw=raw,optimize=optimize,steps=steps)
@@ -747,7 +475,7 @@ class DataSet(object):
             - raw (bool): If True, do not normalize data (default False)
             - optimize (bool): If True, perform optimized cutting (default True)
         Returns:
-            - Pos,Int....
+            - Pos,Int, Errors
             
         """
         intensities = None
@@ -809,7 +537,7 @@ class DataSet(object):
                                                     rightEdge+voff,leftEdge+voff,
                                                     startEdge-voff,endEdge-voff,
                                                     rightEdge-voff,leftEdge-voff],axis=1)
-                    # Calcualte the corresponding A3, A4, and Z positons
+                    # Calculate the corresponding A3, A4, and Z positions
 
                     A3,A4,Z = np.array([TasUBlibDEG.converterToA3A4Z(*pos,df.Ki,df.Ki,A4Sign=-1,radius=df.radius) for pos in checkPositions.T]).T
 
@@ -840,21 +568,6 @@ class DataSet(object):
 
                     
                 else:
-                    # along = np.einsum('ij,i...->...j',relativePosition,directionVector)
-                    
-                    # orthogonal = np.linalg.norm(relativePosition-along*directionVector,axis=0)
-                    
-                    # orthogonal = np.linalg.norm(relativePosition-along*directionVector,axis=0)
-                    # test1 = (orthogonal<width).flatten()
-                    # test2 = (along[0]>-stepSize).flatten()
-                    # test3 = (along[0]<np.linalg.norm(stopAlong)+stepSize).flatten()
-                    
-                    # insideQ = np.all([test1,test2,test3],axis=0)
-                
-                    # intensity = data.flatten()[insideQ]
-                    # pos = sign*along.flatten()[insideQ]
-                    
-                #else:
                     relativePosition = df.q[idx[0]:idx[1]].reshape(3,-1)-QStart.reshape(3,-1)
                 
                 along = np.einsum('ij,i...->...j',relativePosition,directionVector)
@@ -898,9 +611,9 @@ class DataSet(object):
 
         """
         function to store sample object from a df into a binary file.
-        kargs:
+        Kwargs:
             - fileName (str): fileName for UB matrix file. Default is None and sample name form the ds
-            - dataFolder (str): directory for saving UB file. Defualt is None, and in cwd
+            - dataFolder (str): directory for saving UB file. Default is None, and in current working directory
         """
 
         if fileName is None:
@@ -915,14 +628,12 @@ class DataSet(object):
 
 
     def loadSample(self,filePath):
-
         """
         function to load UB from binary file into all dataFiles in a dataSet.
         args: 
             filePath (str): Filepath to UB matrix
             
         """
-
         sampleLoaded = _tools.loadSampleFromDesk(filePath)
         
         for df in self:
@@ -1000,8 +711,6 @@ class DataSet(object):
         On the sample object, the peak used for alignment within the scattering plane is
         saved as sample.peakUsedForAlignment as a dictionary with 'HKL' and 'QxQyQz' holding
         suggested HKL point and original QxQyQz position.
-        
-        
         """
         peakPositions = []
         peakWeights = []
@@ -1022,8 +731,6 @@ class DataSet(object):
             centerPoints = [b[:-1,:-1,:-1]+0.5*dB for b,dB in zip(bins,[dx,dy,dz])]
             
             positions = np.array([b[possiblePeaks] for b in centerPoints]).T
-            
-            
             
             # 3) assuming worse resolution out of plane
             distanceFunctionLocal = lambda a,b: _tools.distance(a,b,dx=1.0,dy=1.0,dz=0.5)
@@ -1113,8 +820,6 @@ class DataSet(object):
             atol+=0.001
             along1 = np.array([np.logical_or(np.isclose(x,0.0,atol=atol),np.isclose(x,1.0,atol=atol)) for x in np.mod(projectionAlongPV1,1)])
             along2 = np.array([np.logical_or(np.isclose(x,0.0,atol=atol),np.isclose(x,1.0,atol=atol)) for x in np.mod(projectionAlongPV2,1)])
-            
-            
         
         # Either we found a peak along planeVector1 or planeVector2
         if np.sum(along1)> 0:
@@ -1128,8 +833,6 @@ class DataSet(object):
             axisOffset = 90.0 # planeVector2 is along the y-axis, e.i. 90 deg rotated from x
             peakUsedForAlignment = {'HKL':   planeVector2*projectionAlongPV2[along2][0],
                                     'QxQyQz':foundPeakPositions[along2][0]}
-    
-    
         
         # 9) 
         # Calculate the actual position of the peak found along planeVector1 or planeVector2
@@ -1215,7 +918,6 @@ class DataSet(object):
         saved as sample.peakUsedForAlignment as a dictionary with 'HKL' and 'QxQyQz' holding
         suggested HKL point and original QxQyQz position.
         
-        
         """
         peakPositions = []
         peakWeights = []
@@ -1227,7 +929,6 @@ class DataSet(object):
                 warnings.simplefilter("ignore")
                 Intensities = np.divide(Intensities[0],Intensities[1])
             
-            
             # 2)
             possiblePeaks = Intensities>threshold
             ints = Intensities[possiblePeaks]
@@ -1235,8 +936,6 @@ class DataSet(object):
             centerPoints = [b[:-1,:-1,:-1]+0.5*dB for b,dB in zip(bins,[dx,dy,dz])]
             
             positions = np.array([b[possiblePeaks] for b in centerPoints]).T
-            
-            
             
             # 3) assuming worse resolution out of plane
             distanceFunctionLocal = lambda a,b: _tools.distance(a,b,dx=1.0,dy=1.0,dz=0.5)
@@ -1250,7 +949,6 @@ class DataSet(object):
         peakWeights = np.concatenate(peakWeights)
         # 4) 
         peaks = _tools.clusterPoints(peakPositions,peakWeights,distanceThreshold=distanceThreshold,distanceFunction=distanceFunctionLocal)
-        
         
         foundPeakPositions = np.array([p.position for p in peaks])
         
@@ -1527,9 +1225,6 @@ class DataSet(object):
                
             4) Above step is repeated with custom distanceThreshold
         
-            
-        
-        
         """
         peakPositions = []
         peakWeights = []
@@ -1541,7 +1236,6 @@ class DataSet(object):
                 warnings.simplefilter("ignore")
                 Intensities = np.divide(Intensities[0],Intensities[1])
             
-            
             # 2)
             possiblePeaks = Intensities>threshold
             
@@ -1550,8 +1244,6 @@ class DataSet(object):
             centerPoints = [b[:-1,:-1,:-1]+0.5*dB for b,dB in zip(bins,[dx,dy,dz])]
             
             positions = np.array([b[possiblePeaks] for b in centerPoints]).T
-            
-            
             
             # 3) assuming worse resolution out of plane
             distanceFunctionLocal = lambda a,b: _tools.distance(a,b,dx=1.0,dy=1.0,dz=0.5)
@@ -1569,7 +1261,6 @@ class DataSet(object):
         # 4) 
         self.peaks = _tools.clusterPoints(peakPositions,peakWeights,distanceThreshold=distanceThreshold,distanceFunction=distanceFunctionLocal,fileName=df.fileName)
         
-        
         foundPeakPositions = np.array([p.position for p in self.peaks])
 
         lenghtInQ = np.array([np.linalg.norm(vec) for vec in foundPeakPositions])
@@ -1583,13 +1274,7 @@ class DataSet(object):
 
         return foundPeakPositions, lenghtInQ, posIn2Theta, foundPeakDic
 
-
-
-
-
-
     def rotateAroundScatteringNormal(self,rotation=0.0):
-        
         """
         Function to rotate a dataSet around the surface normal. Projection vectors are updated not change direction, e.g. stay along x and y axis
         rotation (float): angle to rotate dataSet around scattering plane normal
@@ -1664,20 +1349,6 @@ class DataSet(object):
                 peakDic[peak]['fit'] = [H,x0,sigma,FWHM,integrated]
         
         """
-
-
-
-        # def Gaussian
-        def gauss(x, H, A, x0, sigma):
-            return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
-
-        def gauss_fit(x, y):
-            mean = sum(x * y) / sum(y)
-            sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
-            popt, pcov = curve_fit(gauss, x, y, p0=[min(y), max(y), mean, sigma])
-            return popt
-
-        roi = roi
 
         if integrationList is None:
             integrationList = []
@@ -1887,9 +1558,6 @@ class DataSet(object):
             - saveToNewFile (string) If provided, and saveToFile is True, save a new file with the background subtraction (default False)
             
         """
-
-        # for fg,bg in zip(self,ds2):
-        #     fg._counts = fg.counts-bg.counts
         
         for I,(fg,bg) in enumerate(zip(self,dsBG)):
             newBG = bg.counts
@@ -1926,7 +1594,6 @@ class DataSet(object):
         return self[0].calcualteHKLToA3A4Z(H,K,L,Print=Print,A4Sign=A4Sign)
 
     def export_PSI_format(self,dTheta=0.125,twoThetaOffset=0,bins=None,hourNormalization=False,outFile=None,addTitle=None,outFolder=None,useMask=False,maxAngle=5,applyCalibration=True,correctedTwoTheta=True,sampleName=True,sampleTitle=True,temperature=False,magneticField=False,electricField=False,fileNumber=False,waveLength=False):
-
         """
         The function takes a data set and merge the files.
         Outputs a .dat file in PSI format (Fullprof inst. 8)
@@ -2148,7 +1815,6 @@ class DataSet(object):
             sf.write(fileString)
 
     def export_xye_format(self,dTheta=0.125,twoThetaOffset=0,bins=None,hourNormalization=False,outFile=None,addTitle=None,outFolder=None,useMask=False,maxAngle=5,applyCalibration=True,correctedTwoTheta=True,sampleName=True,sampleTitle=True,temperature=False,magneticField=False,electricField=False,fileNumber=False,waveLength=False):
-
         """
         The function takes a data set and merge the files.
         Outputs a .xye file in with a comment line with info and xye data
@@ -2171,21 +1837,15 @@ class DataSet(object):
                 
             - sampleName (bool): Include sample name in filename. Default is True.
             - sampleTitle (bool): Include sample title in filename. Default is True.
-        
             - temperature (bool): Include temperature in filename. Default is False.
-        
             - magneticField (bool): Include magnetic field in filename. Default is False.
-        
             - electricField (bool): Include electric field in filename. Default is False.
-        
             - fileNumber (bool): Include sample number in filename. Default is False.
             - waveLength (bool): Include waveLength in filename. Default is False. 
             
         Kwargs for sumDetector:
             - twoThetaBins (array): Actual bins used for binning (default [min(twoTheta)-dTheta/2,max(twoTheta)+dTheta/2] in steps of dTheta=0.125 Deg)
-                
             - applyCalibration (bool): Use normalization files (default True)
-                
             - correctedTwoTheta (bool): Use corrected two theta for 2D data (default true)
             
         Returns:
@@ -2201,7 +1861,6 @@ class DataSet(object):
             ...    if np.any(np.isnan(df.monitor)) or np.any(np.isclose(df.monitor,0.0)):
             ...        df.monitor = np.ones_like(df.monitor)
             >>> export_xye_format(ds)
-            
         """
 
         twoTheta = np.asarray([[func(np.abs(df.twoTheta)) for func in [np.min,np.max]] for df in self])
@@ -2264,9 +1923,6 @@ class DataSet(object):
         electricFields = [df.electricField for df in self]
         elec = np.mean(electricFields)
 
-        # fileNumbers = str(self.fileName) 
-        # fileNumbers_short = str(int(self.fileName[0].split('n')[-1].split('.')[0]))  # 
-        
         if len(self) == 1:
             year = 2022
             fileNumbers = str(int(self[0].fileName.split('n')[-1].split('.')[0]))
@@ -2282,7 +1938,6 @@ class DataSet(object):
         else:
             titleLine3= '# '+' '.join(["{:7.3f}".format(x) for x in [start,step,stop]])+" {:7.0f}".format(oneHourMonitor)+', sample="'+samName+'"'
        
-        
         if outFile is None:
             saveFile = "DMC"
             if hourNormalization == True:
@@ -2324,6 +1979,12 @@ class DataSet(object):
          
 
     def updateDataFiles(self,key,value):
+        """Update a property across all data files
+        
+        Args:
+            - key (str): parameter name
+            - value (float): parameter value
+        """
         if np.all([hasattr(df,key) for df in self]): # all datafiles have the key
             try:
                 length = len(value)
@@ -2349,8 +2010,6 @@ class DataSet(object):
                 raise AttributeError('DataFiles do not contain',key)
             else:
                 raise AttributeError('Not all DataFiles do not contain',key)
-
-
 
     def cutQPlane(self,points, width, dQx = None, dQy = None, xBins =None, yBins =None, rlu=False, steps=None, sample = None):
         """Perform QPlane cut where points within +-0.5*width are collapsed onto the plane and binned into xBins and yBins
@@ -2479,7 +2138,6 @@ class DataSet(object):
                 mon = df.monitor[idx[0]:idx[1]]
                 mon=np.repeat(np.repeat(mon[:,np.newaxis],dat.shape[1],axis=1)[:,:,np.newaxis],dat.shape[2],axis=-1)
                 
-                
                 stepsTaken+=steps
 
                 I = df.counts[idx[0]:idx[1]]
@@ -2504,31 +2162,26 @@ class DataSet(object):
 
         return returndata,bins,totalRotMat,translation
 
-
-
     def plotQPlane(self,points, width, sample=None, dQx = None, dQy = None, xBins =None, yBins =None, rlu=False, steps=None,log=False,ax=None,rmcFile=False,**kwargs):
-        #self,QzMin,QzMax,xBinTolerance=0.03,yBinTolerance=0.03,steps=None,log=False,ax=None,rlu=False,rmcFile=False,**kwargs
-        # self,points, width, dQx = None, dQy = None, xBins =None, yBins =None, rlu=False, steps=None
-        # raise NotImplementedError('TODODODODODDO!!')
         """Wrapper for plotting tool to show binned intensities in the Q plane between provided Qz values.
-            
-            
-        Args: 
-            
-            - QzMin (float): Lower qz limit (Default None).
-            
-            - QzMax (float): Upper qz limit (Default None).
+
+        Args:
+            - points (list): List of three points within the wanted plane. X is parallel to point 2 - point 1 (p1, p2, p3 = points)
+            - width (float): Total width of QPlane in units of 1/AA or rlu depending on the rlu flag
+        
         Kwargs:
-           
-            - xBinTolerance (float): bin sizes along x direction (default 0.05). If enlargen is true, this is the minimum bin size.
-            - yBinTolerance (float): bin sizes along y direction (default 0.05). If enlargen is true, this is the minimum bin size.
-            
+        
+            - dQx (float): Step size along x if xBins is not provided (default None)
+            - dQy (float): Step size along y if yBins is not provided (default None)
+            - xBins (list): Binning edges along x, overwrites dQx (default None)
+            - yBins (list): Binning edges along y, overwrites dQy (default None)
+            - rlu (bool): If true utilize sample UB otherwise perform no rotation (default False)
+            - steps (int): Number of a3 step computated at once when performing operation (default len(df))
+            - sample (Sample): Use specified sample for RLU axis if RLU = True (default None = self.sample[0])
             - log (bool): Plot intensities as the logarithm (default False).
-            
             - ax (matplotlib axes): Axes in which the data is plotted (default None). If None, the function creates a new axes object.
             - rlu (bool): If true and axis is None, a new reciprocal lattice axis is created and used for plotting (default True).
             - vmin (float): Lower limit for colorbar (default min(Intensity)).
-            
             - vmax (float): Upper limit for colorbar (default max(Intensity)).
             - colorbar (bool): If True, a colorbar is created in figure (default False)
             - zorder (int): If provided decides the z ordering of plot (default 10)
@@ -2543,8 +2196,7 @@ class DataSet(object):
         .. note::
             The axes object has a new method denoted 'set_clim' taking two parameters (VMin and VMax) used to change axes colouring.
             The axes object has a new method denoted 'to_csv' taking one parameter, fileName, which is where the csv is saved.
-            
-            
+
         """
         
         if 'zorder' in kwargs:
@@ -2558,7 +2210,6 @@ class DataSet(object):
             kwargs = _tools.without_keys(dictionary=kwargs,keys='cmap')
         else:
             cmap = None
-
 
         returndata,bins,rotationMatrix,translation = self.cutQPlane(points=points,sample=sample,width=width,dQx=dQx,dQy=dQy,xBins=xBins,yBins=yBins,rlu=rlu,steps=steps)
 
@@ -2628,9 +2279,6 @@ class DataSet(object):
         ax.set_aspect('equal')
         ax.grid(True, zorder=0)
         
-        
-        
-
         if 'pmeshs' in ax.__dict__:
             ax.pmeshs = np.concatenate([ax.pmeshs,np.asarray(pmeshs)],axis=0)
         else:
@@ -2706,6 +2354,7 @@ class DataSet(object):
 
         ax.data = [ax.intensity,ax.monitorCount,ax.Normalization,ax.NormCount]
         return ax,returndata,bins
+
     def setProjectionVectors(self,p1,p2,p3=None):
         """Set or update the projection vectors used for the View3D
         
@@ -2722,9 +2371,6 @@ class DataSet(object):
         for sample in self.sample:
             sample.setProjectionVectors(p1=p1,p2=p2,p3=p3)
 
-            
-    
-            
             
 def add(*listinput,PSI=True,xye=False,folder=None,outFolder=None,dataYear=None,dTheta=0.125,twoThetaOffset=0,bins=None,outFile=None,addTitle=None,useMask=True,onlyHR=False,maxAngle=5,hourNormalization=True,onlyNorm=True,applyCalibration=True,correctedTwoTheta=True,sampleName=True,sampleTitle=True,temperature=False,magneticField=False,electricField=False,fileNumber=False,waveLength=False):
 
@@ -2825,13 +2471,8 @@ def add(*listinput,PSI=True,xye=False,folder=None,outFolder=None,dataYear=None,d
                 print(f"Cannot export! File is wrong format: {elemnt}")                    
 
 
-# add(565,566,567,(570),'571-573',[574],sampleName=False,temperature=False)
-
-
 def export(*listinput,PSI=True,xye=False,folder=None,outFolder=None,dataYear=None,dTheta=0.125,twoThetaOffset=0,bins=None,outFile=None,addTitle=None,useMask=True,onlyHR=False,maxAngle=5,hourNormalization=True,onlyNorm=True,applyCalibration=True,correctedTwoTheta=True,sampleName=True,sampleTitle=True,temperature=False,magneticField=False,electricField=False,fileNumber=False,waveLength=False):
-
     """
-    
     Takes a set file numbers and export induvidually. 
     The input is read as a tuple and can be formatted as int, str, list, and arguments separated by comma is export induvidually. 
     If one argument is a list or str, multiple filenumbers can be given inside, and they will be added/merged.
@@ -2922,16 +2563,8 @@ def export(*listinput,PSI=True,xye=False,folder=None,outFolder=None,dataYear=Non
                 print(f"Cannot export! File is wrong format: {elemnt}")                    
 
 
-
-
-
-# export(565,'566',[567,568,570,571],'570-573',(574,575),sampleName=False,temperature=False)  
-        
-
 def exportAll(*listinput,PSI=True,xye=False,folder=None,outFolder=None,dataYear=None,dTheta=0.125,twoThetaOffset=0,bins=None,outFile=None,addTitle=None,useMask=True,onlyHR=False,maxAngle=5,hourNormalization=True,onlyNorm=True,applyCalibration=True,correctedTwoTheta=True,sampleName=True,sampleTitle=True,temperature=False,magneticField=False,electricField=False,fileNumber=False,waveLength=False):
-
     """
-    
     Takes a set file numbers and export induvidually. 
     The input is read as a tuple and can be formatted as int, str, list, and arguments separated by comma is export induvidually. 
     If one argument is a list or str, multiple filenumbers can be given inside, and they will be added/merged.
@@ -3023,9 +2656,6 @@ def exportAll(*listinput,PSI=True,xye=False,folder=None,outFolder=None,dataYear=
                         ds.export_xye_format(dTheta=dTheta,twoThetaOffset=twoThetaOffset,bins=bins,outFile=outFile,addTitle=addTitle,outFolder=outFolder,useMask=useMask,maxAngle=maxAngle,hourNormalization=hourNormalization,applyCalibration=applyCalibration,correctedTwoTheta=correctedTwoTheta,sampleName=sampleName,sampleTitle=sampleTitle,temperature=temperature,magneticField=magneticField,electricField=electricField,fileNumber=fileNumber,waveLength=waveLength)    
             except:
                     print(f"Cannot export! File is wrong format: {elemnt}")                    
-
-
-
 
 def export_from(startFile,PSI=True,xye=False,folder=None,outFolder=None,dataYear=None,dTheta=0.125,twoThetaOffset=0,bins=None,outFile=None,addTitle=None,useMask=True,onlyHR=False,maxAngle=5,hourNormalization=True,onlyNorm=True,applyCalibration=True,correctedTwoTheta=True,sampleName=True,sampleTitle=True,temperature=False,magneticField=False,electricField=False,fileNumber=False,waveLength=False):
 
@@ -3126,14 +2756,6 @@ def export_from(startFile,PSI=True,xye=False,folder=None,outFolder=None,dataYear
                 print(f"Cannot export! File is wrong format: {file}")                    
 
 
-
-            
-# export_from(587,sampleName=False,temperature=False)    
-
-
-
-
-
 def export_from_to(startFile,endFile,PSI=True,xye=False,folder=None,outFolder=None,dataYear=None,dTheta=0.125,twoThetaOffset=0,bins=None,outFile=None,addTitle=None,useMask=True,onlyHR=False,maxAngle=5,hourNormalization=True,onlyNorm=True,applyCalibration=True,correctedTwoTheta=True,sampleName=True,sampleTitle=True,temperature=False,magneticField=False,electricField=False,fileNumber=False,waveLength=False):
 
     """
@@ -3230,19 +2852,8 @@ def export_from_to(startFile,endFile,PSI=True,xye=False,folder=None,outFolder=No
 
 
 
-
-# export_from_to(565,570,sampleName=False,temperature=False)
-
-
-
-
-
-
-
 def export_list(listinput,PSI=True,xye=False,folder=None,outFolder=None,dataYear=None,dTheta=0.125,twoThetaOffset=0,bins=None,outFile=None,addTitle=None,useMask=True,onlyHR=False,maxAngle=5,hourNormalization=True,onlyNorm=True,applyCalibration=True,correctedTwoTheta=True,sampleName=True,sampleTitle=True,temperature=False,magneticField=False,electricField=False,fileNumber=False,waveLength=False):
-
     """
-    
     Takes a list and export all elements induvidually. If a list is given inside the list, these files will be added/merged.
     Exports PSI and xye format file for all scans. 
     
@@ -3330,17 +2941,9 @@ def export_list(listinput,PSI=True,xye=False,folder=None,outFolder=None,dataYear
         except:
                 print(f"Cannot export! File is wrong format: {file}")                    
 
-
-
-
-# export_list([565,566,567,[569,570]],sampleName=False,temperature=False)            
-                
-
                 
 def subtract_PSI(file1,file2,outFile=None,folder=None,outFolder=None):
-
     """
-    
     This function takes two .dat files in PSI format and export a differnce curve with correct uncertainties. 
     
     The second file is scaled after the monitor of the first file.
@@ -3433,16 +3036,9 @@ def subtract_PSI(file1,file2,outFile=None,folder=None,outFolder=None):
 
     with open(os.path.join(outFolder,saveFile)+".dat",'w') as sf:
         sf.write(fileString)
-    
-    
-    
-# subtract_PSI('DMC_565','DMC_573')
-
 
 def subtract_xye(file1,file2,outFile=None,folder=None,outFolder=None):
-
     """
-    
     This function takes two .xye files and export a differnce curve with correct uncertainties. 
     
     The second file is scaled after the monitor of the first file.
@@ -3515,9 +3111,6 @@ def subtract_xye(file1,file2,outFile=None,folder=None,outFolder=None):
         np.savetxt(sf,saveData.T,delimiter='  ')
         sf.close()
 
-        
-    # subtract_xye('DMC_565','DMC_573')
-
 def subtract(file1,file2,PSI=True,xye=True,outFile=None,folder=None,outFolder=None):
     """
     This function takes two files and export a differnce curve with correct uncertainties. 
@@ -3555,11 +3148,15 @@ def subtract(file1,file2,PSI=True,xye=True,outFile=None,folder=None,outFolder=No
         except:
             print('Cannot subtract xye format files')
         
-        
-#subtract('DMC_565.xye','DMC_573')
-
 def DMCsort(filelist,sortKey):
-    
+    """Sort a list of files based on a sortKey
+    Args:
+        - filelist (list): List of data file locations to sort. 
+        - sortKey (str): sorting key
+
+    return:
+        sorted list
+    """
     names =  shallowRead(filelist,[str(sortKey)])
     
     listOfFiles = []
@@ -3714,8 +3311,6 @@ def export_help():
     print(" ")
     print(" ")
     print(" ")
-    
-
 
 from matplotlib.ticker import FuncFormatter
 
