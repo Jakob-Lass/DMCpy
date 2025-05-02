@@ -45,7 +45,7 @@ Tutorials
 ---------
 Below is a list of tutorials highlighting the capabilities of DMCpy in regards to a variety of different applications. It ranges from an overall explanation 
 of how to generate *DataFile* and *DataSet* objects over direct plotting of the detector images to generation of the UB matrix, cuts and background subtraction. 
-Main text about the tutorials below..
+Below are all of the tutorials for DMCpy. Some sample data has been made available `here`_
 
 .. toctree::
    :maxdepth: 1
@@ -60,7 +60,7 @@ for tut in tutorials:
     tutorialText.append(str(os.path.relpath(tut,common)).replace('\\','/'))
 
 
-text = mainText+'\n   '+'\n   '.join(tutorialText)+'\n\n'
+text = mainText+'\n   '+'\n   '.join(tutorialText)+'\n\n'+'.. _here: https://www.dropbox.com/scl/fo/86czexjmg4r7wvqbvqimo/AIqE7nmLQSoa4EGA8FX0Pl0?rlkey=p9d0i9cfcc1pzdoz3zutsjf1v&st=ls3avd3i&dl=0\n\n'
 
 
 
