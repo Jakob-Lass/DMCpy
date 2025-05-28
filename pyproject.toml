@@ -2,9 +2,14 @@
 requires = ["setuptools >= 77.0.3"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+packages = ["DMCpy"]
+package-dir = {"DMCpy" = "src"}
+
+
 [project]
 name = "DMCpy"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
   "matplotlib>=3",
   "numpy>=1.14",
@@ -26,7 +31,7 @@ maintainers = [
 ]
 description = "Python software packaged designed for reduction of neutron powder and single crystal diffraction data from DMC at PSI."
 readme = "README.md"
-license = {file = "LICENSE.txt"}
+license-files = ["LICENSE.txt"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
@@ -43,7 +48,6 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
-  "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
   "Operating System :: OS Independent"
 ]
 
