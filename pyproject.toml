@@ -9,7 +9,7 @@ package-dir = {"DMCpy" = "src"}
 
 [project]
 name = "DMCpy"
-version = "1.0.2"
+version = "1.0.1"
 dependencies = [
   "matplotlib>=3",
   "numpy>=1.14",
