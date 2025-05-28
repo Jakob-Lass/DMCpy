@@ -40,7 +40,7 @@ with open('pyproject.toml') as f:
 with open('pyproject.toml','w') as f:
 	f.write(writeLines)
 
-with open('src/__init__.py') as f:
+with open('src/DMCpy/__init__.py') as f:
 	lines = f.readlines()
 	writeLines = ''
 	for l in lines:
@@ -49,7 +49,7 @@ with open('src/__init__.py') as f:
 			l = l[:idx] + "__version__ = '"+version+"'\n"
 		writeLines+=l
         
-with open('src/__init__.py','w') as f:
+with open('src/DMCpy/__init__.py','w') as f:
 	f.write(writeLines)
 
 with open('docs/conf.py') as f:
