@@ -280,7 +280,7 @@ class DataSet(object):
         return ax,twoThetaBins, normalizedIntensity, normalizedIntensityError,summedMonitor
 
     def Viewer3D(self,dqx,dqy,dqz,rlu=True,axis=2, raw=False,  log=False, grid = True, outputFunction=print, 
-                 cmap='viridis',smart=False, steps=None, multiplicationFactor=1):
+                 cmap='viridis', steps=None, multiplicationFactor=1):
 
         """Generate a 3D view of all data files in the DatSet.
         
@@ -334,7 +334,7 @@ class DataSet(object):
         else:
             axes = None
 
-        Data,bins,_ = self.binData3D(dqx,dqy,dqz,rlu=rlu,raw=raw,smart=smart,steps=steps)
+        Data,bins,_ = self.binData3D(dqx,dqy,dqz,rlu=rlu,raw=raw,steps=steps)
 
         Data*=multiplicationFactor
 
