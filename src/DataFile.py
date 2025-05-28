@@ -154,7 +154,7 @@ def loadDataFile(fileLocation=None,fileType='Unknown',unitCell=None,forcePowder=
     if A3 is None: # there is no A3 values at all
         T = 'powder'
         
-    elif (len(A3) == 1 and se_r.any() is None) or forcePowder:
+    elif (len(A3) == 1 and bool(se_r.any()) is False) or forcePowder:
         T = 'powder'
     else:
         T = 'singlecrystal'
