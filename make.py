@@ -65,7 +65,7 @@ def getCurrentVersion():
 def uploadPyPi(server='testpypi'):
     build = getLatestBuild()
     print('Uploading ' + str(build) + ' to '+server)
-    os.system('python -m twine upload {} -r {}'.format(build,server))
+    os.system('python -m twine upload {} -r {} --verbose'.format(build,server))
 
 
 def upload():
