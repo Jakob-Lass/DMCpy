@@ -83,7 +83,9 @@ class MaxNLocator(mticker.MaxNLocator):
 
     def __call__(self, v1, v2): # pragma: no cover
         if self._factor is not None:
-            self.set_bounds(v1*self._factor, v2*self._factor)
+            #self.set_bounds(v1*self._factor, v2*self._factor)
+            #self.set_view_interval(vmin, vmax)
+            self.view_limits(v1*self._factor, v2*self._factor)
             locs = mticker.MaxNLocator.__call__(self)
             return np.array(locs), len(locs), self._factor
         else:
