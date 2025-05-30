@@ -1022,15 +1022,15 @@ def merge(dataFilesList,saveFileName,directory=None, A3Tolerance=0.05, A4Toleran
         process.attrs['NX_class']=b'NXprocess'
         proc = process.create_group('DMCpy_algorithm_merge')
         proc.attrs['NX_class']=b'NXprocess'
-        author= proc.create_dataset('author',shape=(1,),dtype='S70',data=np.string_('DMCpy'))
+        author= proc.create_dataset('author',shape=(1,),dtype='S70',data=np.bytes_('DMCpy'))
         author.attrs['NX_class']=b'NX_CHAR'
-        author= proc.create_dataset('version',shape=(1,),dtype='S70',data=np.string_(DMCpy.__version__))
+        author= proc.create_dataset('version',shape=(1,),dtype='S70',data=np.bytes_(DMCpy.__version__))
         author.attrs['NX_class']=b'NX_CHAR'
         
-        date= proc.create_dataset('date',shape=(1,),dtype='S70',data=np.string_(datetime.datetime.now()))
+        date= proc.create_dataset('date',shape=(1,),dtype='S70',data=np.bytes_(datetime.datetime.now()))
         date.attrs['NX_class']=b'NX_CHAR'
         
-        description = proc.create_dataset('description',shape=(1,),dtype='S70',data=np.string_('Merging of equivalent data files where only A3 differs.'))
+        description = proc.create_dataset('description',shape=(1,),dtype='S70',data=np.bytes_('Merging of equivalent data files where only A3 differs.'))
         description.attrs['NX_class']=b'NX_CHAR'
         
         

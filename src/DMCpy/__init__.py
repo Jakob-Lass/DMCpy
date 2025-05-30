@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 
 
-__version__ = '1.0.1'
+__version__ = '1.0.3'
 __author__ = 'Jakob Lass, Sam Moody, Øystein S. Fjellvåg'
 
 # installFolder = os.path.abspath(os.path.split(__file__)[0])
@@ -36,4 +36,3 @@ except FileNotFoundError:
     foundFile = foundFiles[0]
     with open(foundFile, 'rb') as f:
         calibrationDict = pickle.load(f)
-        print('Using calibrationDict from:', foundFile)

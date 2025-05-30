@@ -1533,7 +1533,7 @@ class DataSet(object):
 
                     folderType = '/'.join(HDFTranslation['backgroundType'].split('/')[:-1])
                     nameType = HDFTranslation['backgroundType'].split('/')[-1]
-                    f[folderType].create_dataset(nameType,data=np.string_(['powder']))
+                    f[folderType].create_dataset(nameType,data=np.bytes_(['powder']))
             else:
                 fg._background = newBG
 
@@ -1583,7 +1583,7 @@ class DataSet(object):
 
                     folderType = '/'.join(HDFTranslation['backgroundType'].split('/')[:-1])
                     nameType = HDFTranslation['backgroundType'].split('/')[-1]
-                    f[folderType].create_dataset(nameType,data=np.string_(['singleCrystal']))
+                    f[folderType].create_dataset(nameType,data=np.bytes_(['singleCrystal']))
             else:
                 fg._background = newBG
 
@@ -2444,7 +2444,7 @@ def add(*listinput,PSI=True,xye=False,folder=None,outFolder=None,dataYear=None,d
             elemnt = elemnt.replace('"','').replace("'","").replace('(','').replace(')','').replace('[','').replace(']','').strip(',')
             listOfDataFiles += f"{elemnt},"
         print(f"Export of added files: {listOfDataFiles[:-1]}")
-        inputNumber = _tools.fileListGenerator(listOfDataFiles[:-1],folder,year=dataYear)
+        inputNumber = _tools.fileListGenerator(listOfDataFiles[:-1],folder=folder,year=dataYear)
         ds = DataSet(inputNumber)
         try:
             if PSI is True and onlyHR is False:

@@ -621,41 +621,41 @@ class DataFile(object):
         with hdf.File(filePath,'w') as f:
     
             # Create correct header info
-            f.attrs['NeXus_Version'] = np.string_('4.4.0')
-            f.attrs['file_name'] = np.string_(filePath)
+            f.attrs['NeXus_Version'] = np.bytes_('4.4.0')
+            f.attrs['file_name'] = np.bytes_(filePath)
             
             
             cT = datetime.datetime.now()
             
-            f.attrs['file_time'] = np.string_('{}-{}-{} {}:{}:{}'.format(cT.year,cT.month,cT.day,cT.hour,cT.minute,cT.second))
-            f.attrs['instrument'] = np.string_('DMC')
-            f.attrs['owner'] = np.string_('Lukas Keller <lukas.keller@psi.ch>')
+            f.attrs['file_time'] = np.bytes_('{}-{}-{} {}:{}:{}'.format(cT.year,cT.month,cT.day,cT.hour,cT.minute,cT.second))
+            f.attrs['instrument'] = np.bytes_('DMC')
+            f.attrs['owner'] = np.bytes_('Lukas Keller <lukas.keller@psi.ch>')
 
             entry = f.create_group('entry')
-            entry.attrs['NX_class'] = np.string_('NXentry')
-            entry.attrs['default'] = np.string_('data')
+            entry.attrs['NX_class'] = np.bytes_('NXentry')
+            entry.attrs['default'] = np.bytes_('data')
 
             # Generate file structure
             DMC = entry.create_group('DMC')
-            DMC.attrs['NX_class'] = np.string_('NXinstrument')
+            DMC.attrs['NX_class'] = np.bytes_('NXinstrument')
             
             SINQ = DMC.create_group('SINQ')
-            SINQ.attrs['NX_class'] = np.string_('NXsource')
-            SINQ.attrs['name'] = np.string_('SINQ')
-            SINQ.attrs['type'] = np.string_('Continuous flux spallation source')
+            SINQ.attrs['NX_class'] = np.bytes_('NXsource')
+            SINQ.attrs['name'] = np.bytes_('SINQ')
+            SINQ.attrs['type'] = np.bytes_('Continuous flux spallation source')
             
             detector = DMC.create_group('detector')
-            detector.attrs['NX_class'] = np.string_('NXdetector')
+            detector.attrs['NX_class'] = np.bytes_('NXdetector')
 
             if self.fileType.lower() != 'singlecrystal':
                 position = detector.create_dataset('detector_position',data=np.array(self.twoThetaPosition))
             else:
                 position = detector.create_dataset('detector_position',data=np.full(len(self),self.twoThetaPosition))
             
-            position.attrs['units'] = np.string_('degree')
+            position.attrs['units'] = np.bytes_('degree')
 
             summedCounts = detector.create_dataset('summed_counts',data=self.counts.sum(axis=0))
-            summedCounts.attrs['units'] = np.string_('counts')
+            summedCounts.attrs['units'] = np.bytes_('counts')
             
             
             # Generate structure of file
@@ -663,38 +663,39 @@ class DataFile(object):
             
             
             mono = DMC.create_group('monochromator')
-            mono.attrs['NX_class'] = np.string_('NXmonochromator')
-            mono.attrs['type'] = np.string_('Pyrolytic Graphite')
+            mono.attrs['NX_class'] = np.bytes_('NXmonochromator')
+            mono.attrs['type'] = np.bytes_('Pyrolytic Graphite')
             
             wavelength = mono.create_dataset('wavelength',data=np.array([self.wavelength]))
             wavelength.attrs['units'] = 'A'
             
             # data
             data = entry.create_group('data')
-            data.attrs['NX_class'] = np.string_('NXdata')
-            data.attrs['signal'] = np.string_('data')
+            data.attrs['NX_class'] = np.bytes_('NXdata')
+            data.attrs['signal'] = np.bytes_('data')
             
             Monitor = entry.create_group('monitor')
-            Monitor.attrs['NX_class'] = np.string_('NXmonitor')
+            Monitor.attrs['NX_class'] = np.bytes_('NXmonitor')
             
             
             user = entry.create_group('user')
-            user.attrs['NX_class'] = np.string_('NXuser')
+            user.attrs['NX_class'] = np.bytes_('NXuser')
             
             
             for key,value in HDFTranslation.items():
+                if value is None: continue
                 if key in ['counts','summedCounts','wavelength','detector_position','twoThetaPosition']: continue
                 if 'sample' in value: continue
                 selfValue = HDFTypes[key](getattr(self,key))
                 
                 newEntry = f.create_dataset(value,data=selfValue)
                 if key in HDFUnits:
-                    newEntry.attrs['units'] = np.string_(HDFUnits[key])
+                    newEntry.attrs['units'] = np.bytes_(HDFUnits[key])
 
                     
             
             sample = entry.create_group('sample')
-            sample.attrs['NX_class'] = np.string_('NXsample')
+            sample.attrs['NX_class'] = np.bytes_('NXsample')
             
             a3 = sample.create_dataset('rotation_angle',data=self.A3)
             a3.attrs['units'] = 'degree'
@@ -705,22 +706,22 @@ class DataFile(object):
             
             # data
             data = entry['data']
-            data.attrs['NX_class'] = np.string_('NXdata')
-            data.attrs['signal'] = np.string_('data')
+            data.attrs['NX_class'] = np.bytes_('NXdata')
+            data.attrs['signal'] = np.bytes_('data')
             
             if self.fileType.lower() != 'singlecrystal':
                 Data = data.create_dataset('data',data=self.counts[0],compression=compression)
             else:
                 Data = data.create_dataset('data',data=self.counts,compression=compression)
-            Data.attrs['units'] = np.string_('A')
+            Data.attrs['units'] = np.bytes_('A')
             
             # Create link to data in the right place
             data = detector['data'] = Data
             data.attrs['signal'] = np.int32(1)
-            data.attrs['target'] = np.string_('/entry/DMC/detector/data')
+            data.attrs['target'] = np.bytes_('/entry/DMC/detector/data')
 
             
-            entry['monitor/monitor'].attrs['units'] = np.string_('counts')
+            #entry['monitor/monitor'].attrs['units'] = np.bytes_('counts')
 
 
     def __eq__(self,other):

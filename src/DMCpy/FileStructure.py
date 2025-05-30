@@ -133,7 +133,7 @@ extraAttributes = ['name','fileLocation']
 possibleAttributes = list(HDFTranslation.keys())+list(HDFInstrumentTranslation.keys())+extraAttributes
 possibleAttributes.sort(key=lambda v: v.lower())
 
-HDFTypes = defaultdict(lambda: lambda x: np.array([np.string_(x)]))
+HDFTypes = defaultdict(lambda: lambda x: np.array([np.bytes_(x)]))
 HDFTypes['monitor'] = np.array
 HDFTypes['monitor1'] = np.array
 HDFTypes['monochromatorCurvature'] = np.array
@@ -147,12 +147,12 @@ HDFTypes['monochromatorTranslationUpper'] = np.array
 HDFTypes['wavelength'] = np.array
 HDFTypes['wavelength_raw'] = np.array
 HDFTypes['twoThetaPosition'] = np.array
-# HDFTypes['mode'] = lambda x: np.array([np.string_(x)])
+# HDFTypes['mode'] = lambda x: np.array([np.bytes_(x)])
 HDFTypes['preset'] = np.array
-# HDFTypes['startTime'] = np.string_
+# HDFTypes['startTime'] = np.bytes_
 HDFTypes['time'] = np.array
-# HDFTypes['endTime'] = np.string_
-# HDFTypes['comment'] = np.string_
+# HDFTypes['endTime'] = np.bytes_
+# HDFTypes['comment'] = np.bytes_
 HDFTypes['absoluteTime'] = np.array
 HDFTypes['protonBeam'] = np.array
 

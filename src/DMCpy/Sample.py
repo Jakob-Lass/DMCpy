@@ -193,7 +193,7 @@ class Sample(object):
             self.UB = self.B
 
     def saveToHdf(self,entry):
-        entry.create_dataset('name',data = [np.string_(self.name)])
+        entry.create_dataset('name',data = [np.bytes_(self.name)])
         if hasattr(self,'unitCell'):
             entry.create_dataset('unit_cell',data = self.unitCell)
 

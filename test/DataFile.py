@@ -64,7 +64,7 @@ def test_masking_2D():
     try:
         df.generateMask()
         assert False
-    except RuntimeError:
+    except AttributeError:
         assert True
 
     df = DataFile.loadDataFile(os.path.join('data','dmc2021n{:06d}.hdf'.format(494)))
@@ -156,19 +156,19 @@ def test_changeOfParameters():
 
     originalKi = df.Ki
     originalWaveLength = df.wavelength
-    originalQ = df.q
+    originalQ = df.Q
 
     df.Ki = 2.0
     assert(np.isclose(df.wavelength,np.pi))
-    assert(np.all(np.logical_not(np.isclose(df.q,originalQ))))
+    assert(np.all(np.logical_not(np.isclose(df.Q,originalQ))))
 
     df.wavelength = 2.0
     assert(np.isclose(df.Ki,np.pi))
-    assert(np.all(np.logical_not(np.isclose(df.q,originalQ))))
+    assert(np.all(np.logical_not(np.isclose(df.Q,originalQ))))
     
     df.Ki = originalKi
     assert(np.isclose(df.wavelength,originalWaveLength))
-    assert(np.all(np.isclose(df.q,originalQ)))
+    assert(np.all(np.isclose(df.Q,originalQ)))
 
     df2 = DataFile.loadDataFile(dataFile)
     df2.twoThetaPosition = np.array([1])
