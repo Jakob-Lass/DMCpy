@@ -1,0 +1,2 @@
+[console_scripts]
+DMCSpy = DMCpy.CommandLineScripts.DMCS:main

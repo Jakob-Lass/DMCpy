@@ -1,10 +1,8 @@
 from xml.dom.minidom import Attr
 
-from attr import Attribute
 from DMCpy import DataSet
 from DMCpy import DataFile
 import os.path
-import matplotlib.pyplot as plt
 import numpy as np
 
 def test_init():

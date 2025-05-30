@@ -36,4 +36,3 @@ except FileNotFoundError:
     foundFile = foundFiles[0]
     with open(foundFile, 'rb') as f:
         calibrationDict = pickle.load(f)
-        print('Using calibrationDict from:', foundFile)
