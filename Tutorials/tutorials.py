@@ -60,7 +60,7 @@ for tut in tutorials:
     tutorialText.append(str(os.path.relpath(tut,common)).replace('\\','/'))
 
 
-text = mainText+'\n   '+'\n   '.join(tutorialText)+'\n\n'+'.. _here: https://www.dropbox.com/scl/fo/86czexjmg4r7wvqbvqimo/AIqE7nmLQSoa4EGA8FX0Pl0?rlkey=p9d0i9cfcc1pzdoz3zutsjf1v&st=ls3avd3i&dl=0\n\n'
+text = mainText+'\n   '+'\n   '.join(tutorialText)+'\n\n'+'.. _here: https://dataverse.no/dataset.xhtml?persistentId=doi:10.18710/5H6KYK\n\n'
 
 
 
