@@ -1,10 +1,10 @@
 Metadata-Version: 2.4
-Name: DMCpy
-Version: 1.0.1
-Summary: Python software packaged designed for reduction of neutron powder and single crystal diffraction data from DMC at PSI.
-Author-email: Jakob Lass <jakob.lass@psi.ch>, Moody Samuel Harrison <samuel.moody@psi.ch>, Øystein Slagtern Fjellvåg  <oystein.fjellvag@ife.no>
-Maintainer-email: Jakob Lass <jakob.lass@psi.ch>, Moody Samuel Harrison <samuel.moody@psi.ch>
-Project-URL: Homepage, https://www.psi.ch/en/sinq/dmc/
+Name: DMCpyZEBRA
+Version: 1.0.0
+Summary: Python software packaged, based on DMCpy, designed for reduction of neutron powder and single crystal diffraction data from ZEBRA at PSI.
+Author-email: Jakob Lass <jakob.lass@psi.ch>, Moody Samuel Harrison <samuel.moody@psi.ch>, Øystein Slagtern Fjellvåg  <oystein.fjellvag@ife.no>, Zeno Maesen <zeno.maesen@psi.ch>
+Maintainer-email: Jakob Lass <jakob.lass@psi.ch>, Moody Samuel Harrison <samuel.moody@psi.ch>, Zeno Maesen <zeno.maesen@psi.ch>
+Project-URL: Homepage, https://www.psi.ch/en/sinq/zebra/
 Project-URL: Documentation, https://DMCpy.readthedocs.org
 Project-URL: Repository, https://github.com/Jakob-Lass/DMCPy.git
 Project-URL: Bug Tracker, https://github.com/Jakob-Lass/DMCPy/issues
@@ -46,14 +46,14 @@ This software package covers conversion and data analysis both neutron powder me
 For the installation, it is recommended to create either a virtual python environment (e.g. through [venv](https://docs.python.org/3/library/venv.html) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html)) and then install the package through the Python Package Index ([PyPI](https://pypi.org/project/DMCpy/)) by issuing 
 
 ```
-pip install DMCpy
+pip install git+https://github.com/Jakob-Lass/DMCpy.git@DMCpyZEBRA
 ```
 or 
 ```
-python3 -m pip install DMCpy
+python3 -m pip install git+https://github.com/Jakob-Lass/DMCpy.git@DMCpyZEBRA
 ```
 
-This will install the software within the environment allowing data analysis of the DMC data structures. Further details are found in our [documentation](https://dmcpy.readthedocs.io/en/latest/introduction.html) 
+This will install the software within the environment allowing data analysis of the ZEBRA data structures. Further details are found in our [documentation](https://dmcpy.readthedocs.io/en/latest/introduction.html) 
 
 
 > **_NOTE:_**  For neutron powder experiments, the pre-installed DMCpy version on the instrument computer is sufficient to convert, calibrate, and extract powder patterns to be used in crystallography software (like [FullProf](https://www.ill.eu/sites/fullprof/), [Jana](https://doi.org/10.1515/zkri-2023-0005), etc.)

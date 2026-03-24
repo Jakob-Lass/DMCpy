@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: MPL-2.0
 import h5py as hdf
 import datetime
 from h5py._hl import attrs
@@ -6,19 +5,20 @@ import numpy as np
 import pickle as pickle
 import matplotlib.pyplot as plt
 import pandas as pd
-import DMCpy
-import os.path
-from DMCpy import InteractiveViewer
-from DMCpy.TasUBlibDEG import converterToA3A4Z
+import DMCpyZEBRA as DMCpy
+from DMCpyZEBRA import InteractiveViewer
+from DMCpyZEBRA.TasUBlibDEG import converterToA3A4Z,calculateBMatrix
+import os
 
 import warnings
 
 import copy
-from DMCpy._tools import KwargChecker, MPLKwargs, roundPower
-from DMCpy import Sample
-from DMCpy.FileStructure import HDFCounts, HDFCountsBG, HDFTranslation, HDFTranslationAlternatives, HDFTranslationDefault, HDFTranslationFunctions
-from DMCpy.FileStructure import HDFInstrumentTranslation, HDFInstrumentTranslationFunctions, extraAttributes, possibleAttributes 
-from DMCpy.FileStructure import HDFTypes, HDFUnits, shallowRead
+from DMCpyZEBRA._tools import KwargChecker, MPLKwargs, roundPower,calculateRotationMatrixAndOffset2
+from DMCpyZEBRA import Sample
+from DMCpyZEBRA.FileStructure import HDFCounts, HDFCountsBG, HDFTranslation, HDFTranslationAlternatives, HDFTranslationDefault, HDFTranslationFunctions
+from DMCpyZEBRA.FileStructure import HDFInstrumentTranslation, HDFInstrumentTranslationFunctions, extraAttributes, possibleAttributes 
+from DMCpyZEBRA.FileStructure import HDFTypes, HDFUnits, shallowRead
+
 
 
 scanTypes = ['Old Data','Powder','A3']
@@ -126,10 +126,32 @@ def getInstrument(file):
     location = file.visititems(lambda x,y: getNX_class(x,y,b'NXinstrument'))
     return file.get(location)
 
+def getZEBRAPixelPositions(radius,twoThetaPosition,detectorTiltAngle):
+    if type(twoThetaPosition)==np.array or type(detectorTiltAngle)==np.array:
+        if len(twoThetaPosition)>1 or len(detectorTiltAngle)>1:
+            raise AttributeError('Scan with varying two-theta or nu is not supported')
+
+    #Calculating twoTheta and verticalPosition (based on PYZEBRA)
+    xnorm = 128
+    znorm = 64
+    xpix = 0.734/1000
+    zpix = 1.4809/1000
+
+    IMAGE_H = 128
+    IMAGE_W = 256
+    z, x = np.ogrid[:IMAGE_H, :IMAGE_W]
+    xobs = (x - xnorm) * xpix
+    zobs = (z - znorm) * zpix
+
+    twoTheta = -(twoThetaPosition + np.rad2deg(np.arctan2(xobs, radius)))
+    nu = detectorTiltAngle + np.rad2deg(np.arctan2(zobs, np.sqrt(xobs**2+radius**2)))
+    verticalPosition = -radius*np.tan(np.deg2rad(nu[:,0]))
+    return twoTheta,verticalPosition
 
 @KwargChecker(include=['radius','twoTheta','verticalPosition','twoThetaPosition','forcePowder','sampleOffsetZ']+list(HDFTranslation.keys()))
 def loadDataFile(fileLocation=None,fileType='Unknown',unitCell=None,forcePowder=False,**kwargs):
     """Load DMC data file, either powder or single crystal data.
+    
     
     """
     if fileLocation is None:
@@ -145,16 +167,18 @@ def loadDataFile(fileLocation=None,fileType='Unknown',unitCell=None,forcePowder=
     elif not os.path.exists(fileLocation): # load file from disk
         raise FileNotFoundError('Provided file path "{}" not found.'.format(fileLocation))
 
+    instr = getInstrument(hdf.File(fileLocation))
     A3 = shallowRead([fileLocation],['A3'])[0]['A3']
 
     se_r = shallowRead([fileLocation],['se_r'])[0]['se_r']
     
     T = 'Unknown' # type of datafile
 
-    if A3 is None: # there is no A3 values at all
+    if instr.name == '/entry1/ZEBRA':
+        T = 'singlecrystal'
+    elif A3 is None: # there is no A3 values at all
         T = 'powder'
-        
-    elif (len(A3) == 1 and bool(se_r.any()) is False) or forcePowder:
+    elif (len(A3) == 1 and se_r.any() is None) or forcePowder:
         T = 'powder'
     else:
         T = 'singlecrystal'
@@ -171,43 +195,50 @@ def loadDataFile(fileLocation=None,fileType='Unknown',unitCell=None,forcePowder=
 
     repeats = df.countShape[1]
     # Insert standard values if not present in kwargs
-    if not 'radius' in kwargs:
-        kwargs['radius'] = 0.8
-
-    if not 'verticalPosition' in kwargs:
-        kwargs['verticalPosition'] = np.linspace(-0.1,0.1,repeats,endpoint=True)
-
     if 'sampleOffsetZ' in kwargs:
         temp_sampleOffsetZ = kwargs['sampleOffsetZ']
         del kwargs['sampleOffsetZ']
     else:
         temp_sampleOffsetZ = None
 
+    # ZEBRA-only handling
+    df.radius/=1000 #Converting from mm to m
+
+    if df.instrGeometry == 'bi':
+        n = df.countShape[0]
+        
+        nVaryingAngles = 0
+        for angle in ['A3','phiRaw','chi']:
+            if hasattr(df,angle):
+                if type(getattr(df,angle))==np.float64 or len(getattr(df,angle))==1:
+                    setattr(df,angle,np.ones(n)*getattr(df,angle))
+                else:
+                    nVaryingAngles+=1
+            else:
+                raise AttributeError(f'Datafile does not contain angle {angle}')
+        if nVaryingAngles<1:
+            raise AttributeError('No angles vary in the datafile')
+        elif nVaryingAngles>1:
+            raise AttributeError('Too many angles vary in the datafile')
+
+    df.A3 = -df.A3
+    df.twoTheta,df.verticalPosition = getZEBRAPixelPositions(df.radius,df.twoThetaPosition,df.nu)
+
+    df.sample.UB = -2*np.pi*df.UB.reshape(3,3)
+    df.sample.getProjectionVectorsFromUB()
+
     # Overwrite parameters provided in the kwargs
     for key,item in kwargs.items():
         setattr(df,key,item)
-        
-    if 'twoThetaPosition' in kwargs:
-        if not 'twoTheta' in kwargs:
-            df.twoTheta = np.linspace(0,-132,9*128)+df.twoThetaPosition
-        else:
-            df.twoTheta = kwargs['twoTheta']
-    elif 'twoTheta' in kwargs:
-        df.twoTheta = kwargs['twoTheta']
+
     
     if temp_sampleOffsetZ is None:
         df.initializeQ()
+        
     else:
         df.sampleOffsetZ = temp_sampleOffsetZ
+
     df.loadNormalization()
-
-    year,month,date = [int(x) for x in df.startTime.replace('T',' ').split(' ')[0].split('-')]
-    if year == 2022:
-        df.mask[0,-2,:] = True
-
-    if year == 2023:
-        df.mask[0,-1,:] = True
-        df.mask[0,:,-1] = True
 
     return df
 
@@ -218,7 +249,7 @@ class DataFile(object):
     def __init__(self, file=None,unitCell=None,forcePowder=False):
         self.fileType = 'DataFile'
         self._twoThetaOffset = 0.0
-        self.monochromatorDistance = 2.82 # 
+        self.monochromatorDistance = 2.82 # <----------------- CHECK
         self._counts = None
         self._background = None
 
@@ -248,12 +279,14 @@ class DataFile(object):
 
         # Open file in reading mode
         with hdf.File(filePath,mode='r') as f:
+            self.instr = getInstrument(f).name.split('/')[-1]
+            HDFTranslationInstr = HDFTranslation
+            HDFTranslationAlternativesInstr = HDFTranslationAlternatives
 
-            self.sample = Sample.Sample(sample=f.get(HDFTranslation['sample']))
+            self.sample = Sample.Sample(sample=f.get(HDFTranslationInstr['sample']))
             self.countShape = f.get(HDFCounts).shape
             self.hasBackground = not f.get(HDFCountsBG) is None
             # load standard things using the shallow read
-            instr = getInstrument(f)
 
             if not f.get('/entry/reduction') is None: # Data file is a merged/reduced data file
                 red = f['/entry/reduction']
@@ -261,20 +294,20 @@ class DataFile(object):
                 # Complicated way to avoid having to guess the name of the reduction algorithm.....
                 self.original_files = np.asarray([name.decode('UTF8') for name in list(red.values())[0].get('rawdata')]) 
                 
-            for parameter in HDFTranslation.keys():
+            for parameter in HDFTranslationInstr.keys():
                 if parameter in ['unitCell','sample','unitCell']:
                     continue
-                if parameter in HDFTranslationAlternatives:
-                    for entry in HDFTranslationAlternatives[parameter]:
+                if parameter in HDFTranslationAlternativesInstr:
+                    for entry in HDFTranslationAlternativesInstr[parameter]:
                         value = np.array(f.get(entry))
                         if not value.shape == ():
                             break
 
-                elif parameter in HDFTranslation:
-                    value = np.array(f.get(HDFTranslation[parameter]))
+                elif parameter in HDFTranslationInstr:
+                    value = np.array(f.get(HDFTranslationInstr[parameter]))
                     TrF= HDFTranslationFunctions
                 elif parameter in HDFInstrumentTranslation:
-                    value = np.array(instr.get(HDFInstrumentTranslation[parameter]))
+                    value = np.array(f.get(HDFInstrumentTranslation[parameter]))
                     TrF= HDFInstrumentTranslationFunctions
 
                 if value.shape == () or value is None:
@@ -285,6 +318,8 @@ class DataFile(object):
                         value = getattr(value,func)(*args)
                 
                 setattr(self,parameter,value)
+            unitCell = np.array(f.get(HDFTranslationInstr['unitCell']))
+                
                 
         self.countShape = (1,*self.countShape) # Standard shape
         if not unitCell is None:
@@ -295,7 +330,7 @@ class DataFile(object):
             self.twoTheta, z = np.meshgrid(self.twoTheta[0].flatten(),self.verticalPosition,indexing='xy')
         else:
             self.twoTheta, z = np.meshgrid(self.twoTheta.flatten(),self.verticalPosition,indexing='xy')
-            
+        
         self.pixelPosition = np.array([-self.radius*np.sin(np.deg2rad(self.twoTheta)),
                                     self.radius*np.cos(np.deg2rad(self.twoTheta)),
                                     -z]).reshape(3,*self.countShape[1:])
@@ -316,25 +351,7 @@ class DataFile(object):
     
     def loadNormalization(self):
         # Load calibration
-        try:
-            if hasattr(self,'original_files'): # We are working with a converted/merged file
-                name = self.original_files[0]
-            else:
-                name = self.fileName
-            self.normalization, self.normalizationFile = findCalibration(name)
-        except ValueError:
-            self.normalizationFile = 'None'
-
-        if self.normalizationFile == 'None':
-            self.normalization = np.ones(self.countShape,dtype=float)
-        else:
-            
-            if self.fileType.lower() == "singlecrystal": # A3 scan
-                self.normalization = self.normalization#np.repeat(self.normalization[np.newaxis],self.countShape[0],axis=0)
-                #self.normalization.shape = self.countShape
-                #self.normalization = self.normalization.reshape(self.countShape)
-            else:
-                self.normalization = self.normalization.reshape(self.countShape)
+        self.normalization = np.ones(self.countShape[1:],dtype=float)
 
     def __len__(self):
         if not hasattr(self,'countShape'):
@@ -448,6 +465,24 @@ class DataFile(object):
         self._sampleOffsetZ = sampleOffsetZ
         self.initializeQ()
         self.calculateQ()
+
+    def calculateRotationMatrix(self):
+        zero = np.zeros_like(self.A3)
+        ones = np.ones_like(self.A3)
+        omMat = np.array([[np.cos(np.deg2rad(self.A3)),np.sin(np.deg2rad(self.A3)),zero],
+                          [-np.sin(np.deg2rad(self.A3)),np.cos(np.deg2rad(self.A3)),zero],
+                          [zero,zero,ones]])
+        if self.instrGeometry == 'nb':
+            return omMat
+        elif self.instrGeometry == 'bi':
+            chiMat = np.array([[np.cos(np.deg2rad(self.chi)),zero,-np.sin(np.deg2rad(self.chi))],
+                               [zero,ones,zero],
+                               [np.sin(np.deg2rad(self.chi)),zero,np.cos(np.deg2rad(self.chi))]])
+            phiMat = np.array([[np.cos(np.deg2rad(self.phiRaw)),-np.sin(np.deg2rad(self.phiRaw)),zero],
+                               [np.sin(np.deg2rad(self.phiRaw)),np.cos(np.deg2rad(self.phiRaw)),zero],
+                               [zero,zero,ones]])
+            return np.einsum('ijm,jkm,klm->ilm', phiMat, chiMat, omMat) 
+        raise AttributeError(f'Instr geometry {self.instrGeometry} not supported')
         
     def calculateQ(self):
         """Calculate Q and qx,qy,qz using the current A3 values"""
@@ -463,9 +498,8 @@ class DataFile(object):
            
         if self.fileType.lower() == 'singlecrystal': # A3 Scan
             # rotate kf to correct for A3
-            zero = np.zeros_like(self.A3)
-            ones = np.ones_like(self.A3)
-            self.rotMat = np.array([[np.cos(np.deg2rad(self.A3)),np.sin(np.deg2rad(self.A3)),zero],[-np.sin(np.deg2rad(self.A3)),np.cos(np.deg2rad(self.A3)),zero],[zero,zero,ones]])
+            self.rotMat = self.calculateRotationMatrix()
+
             self.q_temp = self.kf-self.ki
 
             self.q = lazyQ(self.rotMat, self.q_temp)
@@ -535,8 +569,6 @@ class DataFile(object):
 
             - All other key word arguments are passed on to plotting routine
 
-        Returns:
-            - ax (matplotlib axis): axis into which the detector is potted
         """
 
         if ax is None:
@@ -616,46 +648,47 @@ class DataFile(object):
         """
         if os.path.exists(filePath):
             raise AttributeError('File already exists! ({})'.format(filePath))
+        warnings.warn('ZEBRA DataFile will be stored in DMC format')
 
         
         with hdf.File(filePath,'w') as f:
     
             # Create correct header info
-            f.attrs['NeXus_Version'] = np.bytes_('4.4.0')
-            f.attrs['file_name'] = np.bytes_(filePath)
+            f.attrs['NeXus_Version'] = np.string_('4.4.0')
+            f.attrs['file_name'] = np.string_(filePath)
             
             
             cT = datetime.datetime.now()
             
-            f.attrs['file_time'] = np.bytes_('{}-{}-{} {}:{}:{}'.format(cT.year,cT.month,cT.day,cT.hour,cT.minute,cT.second))
-            f.attrs['instrument'] = np.bytes_('DMC')
-            f.attrs['owner'] = np.bytes_('Lukas Keller <lukas.keller@psi.ch>')
+            f.attrs['file_time'] = np.string_('{}-{}-{} {}:{}:{}'.format(cT.year,cT.month,cT.day,cT.hour,cT.minute,cT.second))
+            f.attrs['instrument'] = np.string_('DMC')
+            f.attrs['owner'] = np.string_('Lukas Keller <lukas.keller@psi.ch>')
 
             entry = f.create_group('entry')
-            entry.attrs['NX_class'] = np.bytes_('NXentry')
-            entry.attrs['default'] = np.bytes_('data')
+            entry.attrs['NX_class'] = np.string_('NXentry')
+            entry.attrs['default'] = np.string_('data')
 
             # Generate file structure
             DMC = entry.create_group('DMC')
-            DMC.attrs['NX_class'] = np.bytes_('NXinstrument')
+            DMC.attrs['NX_class'] = np.string_('NXinstrument')
             
             SINQ = DMC.create_group('SINQ')
-            SINQ.attrs['NX_class'] = np.bytes_('NXsource')
-            SINQ.attrs['name'] = np.bytes_('SINQ')
-            SINQ.attrs['type'] = np.bytes_('Continuous flux spallation source')
+            SINQ.attrs['NX_class'] = np.string_('NXsource')
+            SINQ.attrs['name'] = np.string_('SINQ')
+            SINQ.attrs['type'] = np.string_('Continuous flux spallation source')
             
             detector = DMC.create_group('detector')
-            detector.attrs['NX_class'] = np.bytes_('NXdetector')
+            detector.attrs['NX_class'] = np.string_('NXdetector')
 
             if self.fileType.lower() != 'singlecrystal':
                 position = detector.create_dataset('detector_position',data=np.array(self.twoThetaPosition))
             else:
                 position = detector.create_dataset('detector_position',data=np.full(len(self),self.twoThetaPosition))
             
-            position.attrs['units'] = np.bytes_('degree')
+            position.attrs['units'] = np.string_('degree')
 
             summedCounts = detector.create_dataset('summed_counts',data=self.counts.sum(axis=0))
-            summedCounts.attrs['units'] = np.bytes_('counts')
+            summedCounts.attrs['units'] = np.string_('counts')
             
             
             # Generate structure of file
@@ -663,39 +696,38 @@ class DataFile(object):
             
             
             mono = DMC.create_group('monochromator')
-            mono.attrs['NX_class'] = np.bytes_('NXmonochromator')
-            mono.attrs['type'] = np.bytes_('Pyrolytic Graphite')
+            mono.attrs['NX_class'] = np.string_('NXmonochromator')
+            mono.attrs['type'] = np.string_('Pyrolytic Graphite')
             
             wavelength = mono.create_dataset('wavelength',data=np.array([self.wavelength]))
             wavelength.attrs['units'] = 'A'
             
             # data
             data = entry.create_group('data')
-            data.attrs['NX_class'] = np.bytes_('NXdata')
-            data.attrs['signal'] = np.bytes_('data')
+            data.attrs['NX_class'] = np.string_('NXdata')
+            data.attrs['signal'] = np.string_('data')
             
             Monitor = entry.create_group('monitor')
-            Monitor.attrs['NX_class'] = np.bytes_('NXmonitor')
+            Monitor.attrs['NX_class'] = np.string_('NXmonitor')
             
             
             user = entry.create_group('user')
-            user.attrs['NX_class'] = np.bytes_('NXuser')
+            user.attrs['NX_class'] = np.string_('NXuser')
             
             
             for key,value in HDFTranslation.items():
-                if value is None: continue
                 if key in ['counts','summedCounts','wavelength','detector_position','twoThetaPosition']: continue
                 if 'sample' in value: continue
                 selfValue = HDFTypes[key](getattr(self,key))
                 
                 newEntry = f.create_dataset(value,data=selfValue)
                 if key in HDFUnits:
-                    newEntry.attrs['units'] = np.bytes_(HDFUnits[key])
+                    newEntry.attrs['units'] = np.string_(HDFUnits[key])
 
                     
             
             sample = entry.create_group('sample')
-            sample.attrs['NX_class'] = np.bytes_('NXsample')
+            sample.attrs['NX_class'] = np.string_('NXsample')
             
             a3 = sample.create_dataset('rotation_angle',data=self.A3)
             a3.attrs['units'] = 'degree'
@@ -706,22 +738,22 @@ class DataFile(object):
             
             # data
             data = entry['data']
-            data.attrs['NX_class'] = np.bytes_('NXdata')
-            data.attrs['signal'] = np.bytes_('data')
+            data.attrs['NX_class'] = np.string_('NXdata')
+            data.attrs['signal'] = np.string_('data')
             
             if self.fileType.lower() != 'singlecrystal':
                 Data = data.create_dataset('data',data=self.counts[0],compression=compression)
             else:
                 Data = data.create_dataset('data',data=self.counts,compression=compression)
-            Data.attrs['units'] = np.bytes_('A')
+            Data.attrs['units'] = np.string_('A')
             
             # Create link to data in the right place
             data = detector['data'] = Data
             data.attrs['signal'] = np.int32(1)
-            data.attrs['target'] = np.bytes_('/entry/DMC/detector/data')
+            data.attrs['target'] = np.string_('/entry/DMC/detector/data')
 
             
-            #entry['monitor/monitor'].attrs['units'] = np.bytes_('counts')
+            entry['monitor/monitor'].attrs['units'] = np.string_('counts')
 
 
     def __eq__(self,other):
@@ -762,8 +794,15 @@ class DataFile(object):
                 bg = self.background
             else:
                 bg = 0
+
             with hdf.File(os.path.join(self.folder,self.fileName),mode='r') as f:
-                return (np.array(f.get(HDFCounts))).reshape(self.countShape)-bg
+                c = np.array(f.get(HDFCounts))
+                if "/entry1/experiment_identifier" in f:  # old format
+                    # reshape images (counts) to a correct shape (2006 issue)
+                    c = c.reshape(*self.countShape)
+                else:
+                    c = c.swapaxes(1, 2)
+                return c
         else:
             return self._counts.reshape(self.countShape)
     
@@ -774,7 +813,13 @@ class DataFile(object):
             else:
                 bg = 0
             with hdf.File(os.path.join(self.folder,self.fileName),mode='r') as f:
-                return np.array(f.get(HDFCounts)[sl])-bg
+                c = np.array(f.get(HDFCounts)[sl])
+                if "/entry1/experiment_identifier" in f:  # old format
+                    # reshape images (counts) to a correct shape (2006 issue)
+                    c = c.reshape(*self.countShape)
+                else:
+                    c = c.swapaxes(1, 2)
+                return c[sl]
         else:
             return self._counts[sl]
         
@@ -830,7 +875,23 @@ class DataFile(object):
     def InteractiveViewer(self,**kwargs):
         if not self.fileType.lower() in ['singlecrystal','powder'] :
             raise AttributeError('Interactive Viewer can only be used for the new data files. Either for powder or for a single crystal A3 scan')
-        return InteractiveViewer.InteractiveViewer(self.intensity,self.twoTheta,self.pixelPosition,self.A3,scanParameter = 'A3',scanValueUnit='deg',colorbar=True,**kwargs)
+        
+        pixelPosition = self.pixelPosition
+        pixelPosition[2,:] = np.rad2deg(np.arctan2(-pixelPosition[2,:],self.radius))
+        ylabel = 'nu [deg]'
+        if np.abs(self.A3[-1]-self.A3[0])>1:
+            scanValues = self.A3
+            scanParameter = 'A3'
+        elif np.abs(self.phiRaw[-1]-self.phiRaw[0])>1:
+            scanValues = self.phiRaw
+            scanParameter = 'phi'
+        elif np.abs(self.chi[-1]-self.chi[0])>1:
+            scanValues = self.chi
+            scanParameter = 'chi'
+        else:
+            raise AttributeError('Could not find an angle that varies')
+
+        return InteractiveViewer.InteractiveViewer(self.intensity,self.twoTheta,pixelPosition,scanValues,scanParameter = scanParameter,scanValueUnit='deg',ylabel = ylabel,colorbar=True,**kwargs)
 
     @property
     def correctedTwoTheta(self):
@@ -865,7 +926,7 @@ class SingleCrystalDataFile(DataFile):
     def __init__(self,fileType,*args,**kwargs):
         super(SingleCrystalDataFile,self).__init__(fileType,*args,**kwargs)
         self.fileType = 'SingleCrystal'
-        self.countShape = (self.countShape[0]*self.countShape[1],128,1152)
+        self.countShape = (self.countShape[0]*self.countShape[1],128,256)
 
     def calcualteHKLToA3A4Z(self,H,K,L,Print=True,A4Sign=-1):
         Qx,Qy,Qz = self.sample.calculateHKLToQxQyQz(H,K,L)

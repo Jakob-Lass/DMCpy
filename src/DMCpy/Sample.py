@@ -1,9 +1,8 @@
-# SPDX-License-Identifier: MPL-2.0
 from cmath import acos
 import numpy as np
-from DMCpy import _tools
+from DMCpyZEBRA import _tools
 import h5py as hdf
-from DMCpy import TasUBlibDEG
+from DMCpyZEBRA import TasUBlibDEG
 import warnings
 
 def cosd(x):
@@ -193,7 +192,7 @@ class Sample(object):
             self.UB = self.B
 
     def saveToHdf(self,entry):
-        entry.create_dataset('name',data = [np.bytes_(self.name)])
+        entry.create_dataset('name',data = [np.string_(self.name)])
         if hasattr(self,'unitCell'):
             entry.create_dataset('unit_cell',data = self.unitCell)
 
@@ -230,6 +229,28 @@ class Sample(object):
 
         # Rotates into the scattering plane
         self.UB = np.dot(self.ROT.T,np.dot(self.projectionB,np.linalg.inv(self.projectionVectors)))#np.linalg.inv(np.dot(Binverse,self.ROT))
+
+    def getProjectionVectorsFromUB(self,UB=None):
+        if UB is None and not hasattr(self,'UB'):
+            raise AttributeError('No UB matrix present in sample.')
+        elif hasattr(self,'UB'):
+            UB = self.UB
+
+        projectionVector1,projectionVector2,projectionVector3 = np.eye(3)
+            
+        pV1q = np.dot(UB,projectionVector1)
+        pV2q = np.dot(UB,projectionVector2)
+        
+        points = np.asarray([[0.0,0.0,0.0],pV1q,pV2q])
+        rot,tr = _tools.calculateRotationMatrixAndOffset2(points)
+        
+        self.P1 = projectionVector1
+        self.P2 = projectionVector2
+        self.P3 = projectionVector3
+        self.ROT = rot
+    
+        self.projectionVectors = np.array([self.P1,self.P2,self.P3]).T
+        
 
         
     def tr(self,proj0,proj1,proj2=None):

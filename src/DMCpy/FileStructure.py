@@ -1,67 +1,57 @@
-# SPDX-License-Identifier: MPL-2.0
 import numpy as np
 from collections import defaultdict
 import warnings, os
 import h5py as hdf
 
-
-HDFCounts = 'entry/DMC/detector/data'
+HDFCounts = 'entry1/area_detector2/data'
 HDFCountsBG = 'entry/data/background'
 ## Dictionary for holding hdf position of attributes. HDFTranslation['a3'] gives hdf position of 'a3'
-HDFTranslation = {'sample':'/entry/sample',
-                  'sampleName':'/entry/sample/name',
-                  'monitor':None,#'entry/monitor/monitor',
-                  'monitor1':'entry/monitor/monitor1',
-                  'unitCell':'/entry/sample/unit_cell',
-                  #'counts':'entry/DMC/detector/data',
-                  #'background':'entry/DMC/detector/background',
-                  'backgroundType':'entry/data/backgroundType',
-                  'summedCounts': 'entry/DMC/detector/summed_counts',
-                  'monochromatorCurvature':'entry/DMC/monochromator/curvature',
-                  'monochromatorVerticalCurvature':'entry/DMC/monochromator/curvature_vertical',
-                  'monochromatorGoniometerLower':'entry/DMC/monochromator/goniometer_lower',
-                  'monochromatorGoniometerUpper':'entry/DMC/monochromator/goniometer_upper',
-                  'monochromatorRotationAngle':'entry/DMC/monochromator/rotation_angle',
-                  'monochromatorTakeoffAngle':'entry/DMC/monochromator/takeoff_angle',
-                  'monochromatorTranslationLower':'entry/DMC/monochromator/translation_lower',
-                  'monochromatorTranslationUpper':'entry/DMC/monochromator/translation_upper',
+HDFTranslation = {'sample':'/entry1/sample',
+                  'sampleName':'/entry1/sample/name',
+                  'monitor':None,#'entry1/monitor/monitor',
+                  'monitor1':'entry1/control/Monitor',
+                  'unitCell':'/entry1/sample/cell',
+                  'UB':'entry1/sample/UB',
+                  #'counts':'entry1/DMC/detector/data',
+                  #'background':'entry1/DMC/detector/background',
                   
-
-                  'wavelength':'entry/DMC/monochromator/wavelength',
-                  'wavelength_raw':'entry/DMC/monochromator/wavelength_raw',
-                  'twoThetaPosition':'entry/DMC/detector/detector_position',
-                  'mode':'entry/monitor/mode',
-                  'preset':'entry/monitor/preset',
-                  'startTime':'entry/start_time',
-                  'time':'Henning',# Is to be caught by HDFTranslationAlternatives 'entry/monitor/time',
-                  'endTime':'entry/end_time',
-                  'comment':'entry/comment',
-                  'proposal':'entry/proposal_id',
-                  'proposalTitle':'entry/proposal_title',
-                  'localContact':'entry/local_contact/name',
-                  'proposalUser':'entry/proposal_user/name',
-                  'proposalEmail':'entry/proposal_user/email',
-                  'user':'entry/user/name',
-                  'email':'entry/user/email',
-                  'address':'entry/user/address',
-                  'affiliation':'entry/user/affiliation',
-                  'A3':'entry/sample/rotation_angle',
+                  'radius':'entry1/ZEBRA/area_detector2/distance',
+                  'wavelength':'entry1/ZEBRA/monochromator/wavelength',
+                  'twoThetaPosition':'entry1/ZEBRA/area_detector2/polar_angle',
+                  'nu':'entry1/ZEBRA/area_detector2/tilt_angle',
+                  'startTime':'entry1/start_time',
+                  'time':'Henning',# Is to be caught by HDFTranslationAlternatives 'entry1/monitor/time',
+                  'endTime':'entry1/end_time',
+                  'comment':'entry1/comment',
+                  'proposal':'entry1/proposal_id',
+                  'proposalTitle':'entry1/proposal_title',
+                  'localContact':'entry1/local_contact/name',
+                  'proposalUser':'entry1/proposal_user/name',
+                  'proposalEmail':'entry1/proposal_user/email',
+                  'user':'entry1/user/name',
+                  'email':'entry1/user/email',
+                  'address':'entry1/user/address',
+                  'affiliation':'entry1/user/affiliation',
+                  'A3':'entry1/sample/rotation_angle',
+                  'phiRaw':'entry1/sample/phi',
+                  'chi':'entry1/sample/chi',
                   'se_r':'entry/sample/se_r',
-                  'temperature':'entry/sample/temperature',
-                  'magneticField':'entry/sample/magnetic_field',
-                  'electricField':'entry/sample/electric_field',
-                  'scanCommand':'entry/scancommand',
-                  'title':'entry/title',
-                  'absoluteTime':'entry/control/absolute_time',
-                  'protonBeam':None# 'entry/proton_beam/data'
+                  'temperature':'entry1/sample/temperature',
+                  'magneticField':'entry1/sample/magnetic_field',
+                  'electricField':'entry1/sample/electric_field',
+                  'title':'entry1/title',
+                  'absoluteTime':'entry1/control/time',
+                  'protonBeam':None,# 'entry1/proton_beam/data'
+                  'instrGeometry':'entry1/zebra_mode'
 }
 
 HDFTranslationAlternatives = { # Alternatives to the above list. NOTTICE: The above positions are not checked if an entry in HDFTranslationAlternatives is present
-    'time':['entry/monitor/time','entry/monitor/monitor'],
-    'monitor':['entry/monitor/monitor','entry/monitor/monitor2'],
-    'protonBeam':['entry/proton_beam/data','entry/monitor/proton_charge']
+    'time':['entry1/control/time','entry1/monitor/monitor'],
+    'monitor':['entry1/control/Monitor','entry1/control/data'],
+    'protonBeam':['entry1/proton_beam/data','entry1/monitor/proton_charge'],
+    'A3':['entry1/sample/rotation_angle','entry1/area_detector2/rotation_angle'],
+    'temperature':['entry1/sample/temperature','entry1/sample/Ts/value']
 }
-
 ## Dictionary for holding standard values 
 
 HDFTranslationDefault = {'twoThetaPosition':np.array([0.0]),
@@ -86,9 +76,8 @@ HDFTranslationDefault = {'twoThetaPosition':np.array([0.0]),
                          'protonBeam': np.array([0.0]),
                          'se_r': np.array([0.0]),
 
-                         'backgroundType': 'None'
-                         
-                         
+                         'backgroundType': 'None',
+                         'instrGeometry': 'nb'
 
 }
 
@@ -111,6 +100,7 @@ HDFTranslationFunctions['proposalUser'] = [['__getitem__',[0]],['decode',['utf8'
 HDFTranslationFunctions['proposalEmail'] = [['__getitem__',[0]],['decode',['utf8']]]
 HDFTranslationFunctions['user'] = [['__getitem__',[0]],['decode',['utf8']]]
 HDFTranslationFunctions['email'] = [['__getitem__',[0]],['decode',['utf8']]]
+HDFTranslationFunctions['instrGeometry'] = [['__getitem__',[0]],['decode',['utf8']]]
 HDFTranslationFunctions['address'] = [['__getitem__',[0]],['decode',['utf8']]]
 HDFTranslationFunctions['affiliation'] = [['__getitem__',[0]],['decode',['utf8']]]
 HDFTranslationFunctions['scanCommand'] = [['__getitem__',[0]],['decode',['utf8']]]
@@ -130,10 +120,14 @@ HDFInstrumentTranslationFunctions['wavelength_raw'] = [['mean',]]
 
 extraAttributes = ['name','fileLocation']
 
-possibleAttributes = list(HDFTranslation.keys())+list(HDFInstrumentTranslation.keys())+extraAttributes
-possibleAttributes.sort(key=lambda v: v.lower())
+def possibleAttributes(instr=None):
+    # instr argument kept for compatibility; ZEBRA-only underlying translation used
+    pA = list(HDFTranslation.keys())+list(HDFInstrumentTranslation.keys())+extraAttributes
+    pA.sort(key=lambda v: v.lower())
+    return pA
 
-HDFTypes = defaultdict(lambda: lambda x: np.array([np.bytes_(x)]))
+
+HDFTypes = defaultdict(lambda: lambda x: np.array([np.string_(x)]))
 HDFTypes['monitor'] = np.array
 HDFTypes['monitor1'] = np.array
 HDFTypes['monochromatorCurvature'] = np.array
@@ -147,12 +141,16 @@ HDFTypes['monochromatorTranslationUpper'] = np.array
 HDFTypes['wavelength'] = np.array
 HDFTypes['wavelength_raw'] = np.array
 HDFTypes['twoThetaPosition'] = np.array
-# HDFTypes['mode'] = lambda x: np.array([np.bytes_(x)])
+HDFTypes['A3'] = np.array
+HDFTypes['chi'] = np.array
+HDFTypes['phiRaw'] = np.array
+HDFTypes['nu'] = np.array
+# HDFTypes['mode'] = lambda x: np.array([np.string_(x)])
 HDFTypes['preset'] = np.array
-# HDFTypes['startTime'] = np.bytes_
+# HDFTypes['startTime'] = np.string_
 HDFTypes['time'] = np.array
-# HDFTypes['endTime'] = np.bytes_
-# HDFTypes['comment'] = np.bytes_
+# HDFTypes['endTime'] = np.string_
+# HDFTypes['comment'] = np.string_
 HDFTypes['absoluteTime'] = np.array
 HDFTypes['protonBeam'] = np.array
 
@@ -187,14 +185,15 @@ def getInstrument(file):
     location = file.visititems(lambda x,y: getNX_class(x,y,b'NXinstrument'))
     return file.get(location)
 
-def shallowRead(files,parameters):
-
+def shallowRead(files,parameters,instr=None):
+    # ZEBRA-only shallow read: instr argument accepted for compatibility
+    if instr is None:
+        instr = 'ZEBRA'
     parameters = np.array(parameters)
     values = []
-    possibleAttributes.sort(key=lambda v: v.lower())
     possible = []
     for p in parameters:
-        possible.append(p in possibleAttributes)
+        possible.append(p in possibleAttributes(instr))
     
     if not np.all(possible):
         if np.sum(np.logical_not(possible))>1:
@@ -206,7 +205,6 @@ def shallowRead(files,parameters):
         vals = {}
         vals['file'] = file
         with hdf.File(file,mode='r') as f:
-            instr = getInstrument(f)
             for p in parameters:
                 if p == 'name':
                     v = os.path.basename(file)
@@ -223,11 +221,12 @@ def shallowRead(files,parameters):
                             TrF= HDFTranslationFunctions
                             break
 
+
                 elif p in HDFTranslation:
                     v = np.array(f.get(HDFTranslation[p]))
                     TrF= HDFTranslationFunctions
                 elif p in HDFInstrumentTranslation:
-                    v = np.array(instr.get(HDFInstrumentTranslation[p]))
+                    v = np.array(f.get(HDFInstrumentTranslation[p]))
                     TrF= HDFInstrumentTranslationFunctions
                 else:
                     raise AttributeError('Parameter "{}" not found'.format(p))

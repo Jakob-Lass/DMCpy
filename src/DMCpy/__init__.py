@@ -1,25 +1,19 @@
 import sys,os
 sys.path.append('.')
-import pickle
-import numpy as np
+import pickle,numpy as np
 
-
-__version__ = '1.0.3'
-__author__ = 'Jakob Lass, Sam Moody, Øystein S. Fjellvåg'
+__version__ = '1.0.0'
+__author__ = 'Jakob Lass, Zeno Maesen'
 
 # installFolder = os.path.abspath(os.path.split(__file__)[0])
 # calibrationFile =  os.path.join(installFolder,'calibrationDict.dat')
 
-#installFolder = os.path.abspath(os.path.join(os.path.split(__file__)[0],'..'))
-#calibrationFile =  os.path.join(installFolder,'DMCpy','calibrationDict.dat')
-
-installFolder = os.path.dirname(__file__)
-calibrationFile = os.path.join(installFolder, './src/DMCpy/calibrationDict.dat')
+installFolder = os.path.abspath(os.path.join(os.path.split(__file__)[0],'..'))
+calibrationFile =  os.path.join(installFolder,'DMCpyZEBRA','calibrationDict.dat')
 
 try:
-    with open(calibrationFile, 'rb') as f:
+    with open(calibrationFile,'rb') as f:
         calibrationDict = pickle.load(f)
-        
 except FileNotFoundError:
     def find(name, path):
         result = []
@@ -28,11 +22,8 @@ except FileNotFoundError:
                 result.append(os.path.join(root, name))
         return result
 
-    foundFiles = find('calibrationDict.dat', os.path.abspath(os.path.join(installFolder, '..', '..')))
     
-    if not foundFiles:
-        raise FileNotFoundError("calibrationDict.dat not found in expected locations.")
-    
-    foundFile = foundFiles[0]
-    with open(foundFile, 'rb') as f:
+    foundFile = str(find('calibrationDict.dat',os.path.abspath(os.path.join(installFolder,'..','..','..','..','..','..')))[0])
+
+    with open(foundFile,'rb') as f:
         calibrationDict = pickle.load(f)

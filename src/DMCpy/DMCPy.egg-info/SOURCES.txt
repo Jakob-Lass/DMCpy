@@ -2,7 +2,7 @@ LICENSE.txt
 README.md
 pyproject.toml
 setup.cfg
-src/CommandLineScripts/DMCS.py
+src/CommandLineScripts/ZEBRAS.py
 src/CommandLineScripts/DMCpy.py
 src/CommandLineScripts/__init__.py
 src/CommandLineScripts/convert.py

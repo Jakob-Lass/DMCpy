@@ -1,2 +1,2 @@
 [console_scripts]
-DMCSpy = DMCpy.CommandLineScripts.DMCS:main
+ZEBRASpy = DMCpyZEBRA.CommandLineScripts.ZEBRAS:main

@@ -1,6 +1,5 @@
-# SPDX-License-Identifier: MPL-2.0
 import tkinter as tk
-from DMCpy import DataSet, TasUBlibDEG, DataFile, Sample
+from DMCpyZEBRA import DataSet, TasUBlibDEG, DataFile, Sample
 import numpy as np
 
 def predictiveTool():

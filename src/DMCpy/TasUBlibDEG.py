@@ -1,6 +1,5 @@
-# SPDX-License-Identifier: MPL-2.0
 import numpy as np
-from DMCpy import _tools
+from DMCpyZEBRA import _tools
 
 def cosd(x):
     return np.cos(np.deg2rad(x))

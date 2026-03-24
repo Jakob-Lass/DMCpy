@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MPL-2.0
+
 import warnings
 import sys
 import matplotlib.gridspec
@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import matplotlib
 pltversion = float('.'.join(matplotlib.__version__.split('.')[:2]))
-from DMCpy import  _tools
+from DMCpyZEBRA import  _tools
 
 import functools
 
@@ -342,7 +342,7 @@ class Viewer3D(object):
             else:
                 tempData = np.ma.array(self.im.get_array().T)
             tempData.mask = np.ones_like(tempData,dtype=bool)
-            self.im.set_array(tempData.T)
+            self.im.set_array(tempData)
             self._axesChanged = False
         else:
             self.im.set_array(self.masked_array[:,:,int(self.value)].T.flatten())

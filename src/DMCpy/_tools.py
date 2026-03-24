@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: MPL-2.0
 import functools
 import sys
 sys.path.append('.')
@@ -10,9 +9,9 @@ from itertools import product
 import pickle
 import h5py as hdf
 import datetime, shutil
-from DMCpy.FileStructure import shallowRead, HDFTranslationAlternatives, HDFTranslation, HDFCounts
-from scipy.optimize import curve_fit
-import DMCpy
+from DMCpyZEBRA.FileStructure import shallowRead, HDFTranslationAlternatives, HDFTranslation, HDFCounts
+
+import DMCpyZEBRA
 
 
 MPLKwargs = ['agg_filter','alpha','animated','antialiased','aa','clip_box','clip_on','clip_path','color','c','colorbar','contains','dash_capstyle','dash_joinstyle','dashes','drawstyle','figure','fillstyle','gid','label','linestyle or ls','linewidth or lw','marker','markeredgecolor or mec','markeredgewidth or mew','markerfacecolor or mfc','markerfacecoloralt or mfcalt','markersize or ms','markevery','path_effects','picker','pickradius','rasterized','sketch_params','snap','solid_capstyle','solid_joinstyle','transform','url','visible','xdata','ydata','zorder']
@@ -159,6 +158,8 @@ def fileListGenerator(numberString,folder,year=2021, format = None, instrument =
     if format is None: # If no user specified format is provided
         if instrument == 'dmc':
             format = 'dmc{:d}n{:06d}.hdf'
+        elif instrument == 'zebra':
+            format = 'zebra{:d}n{:06d}.hdf'
         else:
             raise AttributeError('Provided instrument "{}" not understood'.format(instrument))
 
@@ -828,7 +829,7 @@ def calculateRotationMatrixAndOffset2(points):
     return ROT,offset.mean()
 
 
-def merge(dataFilesList,saveFileName,directory=None, A3Tolerance=0.05, A4Tolerance = 0.1, wavelengthTolerance = 0.01):
+def merge(dataFilesList,saveFileName,directory=None, A3Tolerance=0.05, A4Tolerance = 0.1, wavelengthTolerance = 0.01,instr='DMC'):
     """Merge multiple single crystal data files togehter with equal sample, A4, and wavelength
     
     Args:
@@ -935,10 +936,10 @@ def merge(dataFilesList,saveFileName,directory=None, A3Tolerance=0.05, A4Toleran
     
     def getPositionInFile(file,parameter):
         """ Get position of specified parameter in HDF file"""
-        if not parameter in HDFTranslationAlternatives:
-                intensityPositionsInFile = [HDFTranslation[parameter]]
+        if not parameter in HDFTranslationAlternatives(instr):
+                intensityPositionsInFile = [HDFTranslation(instr)[parameter]]
         else:
-            intensityPositionsInFile = HDFTranslationAlternatives[parameter]
+            intensityPositionsInFile = HDFTranslationAlternatives(instr)[parameter]
             
         if len(intensityPositionsInFile)>1: # If there are multiple possible positions
             for pos in intensityPositionsInFile[::-1]: # Last entry is the newest
@@ -966,7 +967,7 @@ def merge(dataFilesList,saveFileName,directory=None, A3Tolerance=0.05, A4Toleran
     totalSteps = len(newA3)
     with hdf.File(savepath,'r') as saveFile:
         # Find positions in dataFilesList
-        countPositionInFile = '/'+HDFCounts#
+        countPositionInFile = '/'+HDFCounts(instr)#
         countShape = saveFile[countPositionInFile].shape
         monitorPositionInFile = getPositionInFile(saveFile,'monitor')
         summedCountsPositionInFile = getPositionInFile(saveFile,'summedCounts')
@@ -1022,15 +1023,15 @@ def merge(dataFilesList,saveFileName,directory=None, A3Tolerance=0.05, A4Toleran
         process.attrs['NX_class']=b'NXprocess'
         proc = process.create_group('DMCpy_algorithm_merge')
         proc.attrs['NX_class']=b'NXprocess'
-        author= proc.create_dataset('author',shape=(1,),dtype='S70',data=np.bytes_('DMCpy'))
+        author= proc.create_dataset('author',shape=(1,),dtype='S70',data=np.string_('DMCpy'))
         author.attrs['NX_class']=b'NX_CHAR'
-        author= proc.create_dataset('version',shape=(1,),dtype='S70',data=np.bytes_(DMCpy.__version__))
+        author= proc.create_dataset('version',shape=(1,),dtype='S70',data=np.string_(DMCpyZEBRA.__version__))
         author.attrs['NX_class']=b'NX_CHAR'
         
-        date= proc.create_dataset('date',shape=(1,),dtype='S70',data=np.bytes_(datetime.datetime.now()))
+        date= proc.create_dataset('date',shape=(1,),dtype='S70',data=np.string_(datetime.datetime.now()))
         date.attrs['NX_class']=b'NX_CHAR'
         
-        description = proc.create_dataset('description',shape=(1,),dtype='S70',data=np.bytes_('Merging of equivalent data files where only A3 differs.'))
+        description = proc.create_dataset('description',shape=(1,),dtype='S70',data=np.string_('Merging of equivalent data files where only A3 differs.'))
         description.attrs['NX_class']=b'NX_CHAR'
         
         
@@ -1150,13 +1151,3 @@ def findOrthogonalBasis(v1,v2,v3,B):
     p2Q = np.dot(B,p2)
     p3 = LengthOrder(np.dot(np.linalg.inv(B),np.cross(p1Q,p2Q)))      
     return np.asarray([p1,p2,p3])
-
-# def Gaussian
-def gauss(x, H, A, x0, sigma):
-    return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
-
-def gauss_fit(x, y):
-    mean = sum(x * y) / sum(y)
-    sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
-    popt, pcov = curve_fit(gauss, x, y, p0=[min(y), max(y), mean, sigma])
-    return popt

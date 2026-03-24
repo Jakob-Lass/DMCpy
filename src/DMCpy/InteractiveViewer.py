@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: MPL-2.0
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 import numpy as np
@@ -63,6 +62,10 @@ class InteractiveViewer(object):
             self.scanValues = scanValues
         else:
             self.scanValues = np.arange(len(data))
+
+        # If scan values are decreasing, flip them
+        if self.scanValues[0]>self.scanValues[-1]:
+            self.scanValues = self.scanValues[::-1]
             
         self.dataLabel = dataLabel
         self.axis_1_label = axis_1_label
@@ -80,7 +83,7 @@ class InteractiveViewer(object):
                 minStep = 1
             else:
                 minStep = np.diff(self.scanValues).mean()
-            order = int(np.ceil(np.log10(minStep)))
+            order = int(np.ceil(np.log10(np.abs(minStep))))
             decimals = np.max([0,3-order])
             self.scanValueFormat  = '{:.'+str(decimals)+'f}'#'{:.'+str(order)+'}'
             self.valfmt = '%.'+str(decimals)+'f'
@@ -275,9 +278,9 @@ class InteractiveViewer(object):
         
         
     def onkeypress(self,event): # pragma: no cover
-        if event.key in ['+','up']:
+        if event.key in ['+','up','right']:
             self.increaseAxis()
-        elif event.key in ['-','down']:
+        elif event.key in ['-','down','left']:
             self.decreaseAxis()
         elif event.key in ['home']:
             index = 0
@@ -285,9 +288,9 @@ class InteractiveViewer(object):
         elif event.key in ['end']:
             index = len(self.data)-1
             self.plotSpectrum(index)
-        elif event.key in ['pageup','ctrl++','ctrl+up']: # Pressing pageup or page down performs steps of 10
+        elif event.key in ['pageup','ctrl++','ctrl+up','ctrl+right']: # Pressing pageup or page down performs steps of 10
             self.increaseAxis(step=10)
-        elif event.key in ['pagedown','ctrl+-','ctrl+down']:
+        elif event.key in ['pagedown','ctrl+-','ctrl+down','ctrl+left']:
             self.decreaseAxis(step=10)
             
     def sliders_on_changed(self,index):
