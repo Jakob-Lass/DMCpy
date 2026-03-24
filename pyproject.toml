@@ -18,7 +18,7 @@ dependencies = [
   "future",
   "tk"
 ]
-requires-python = ">=3.6"
+requires-python = ">=3.9"
 authors = [
   {name = "Jakob Lass", email = "jakob.lass@psi.ch"},
   {name = "Moody Samuel Harrison", email = "samuel.moody@psi.ch"},
