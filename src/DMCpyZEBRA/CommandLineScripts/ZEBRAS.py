@@ -30,7 +30,7 @@ class MyGUI:
                 # Variables for getting the DataFiles
         self.scanNumbers_var = tk.StringVar()
         self.dataFolder_var = tk.StringVar()
-        self.year_var = tk.StringVar(value='2025')
+        self.year_var = tk.StringVar(value='2026')
 
                 # Variables needed for the unit cell
         self.a = tk.DoubleVar(value=12.626)
