@@ -8,11 +8,11 @@ This software package covers conversion and data analysis both neutron powder me
 For the installation, it is recommended to create either a virtual python environment (e.g. through [venv](https://docs.python.org/3/library/venv.html) or [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html)) and then install the package through the Python Package Index ([PyPI](https://pypi.org/project/DMCpy/)) by issuing 
 
 ```
-pip install git+https://github.com/Jakob-Lass/DMCpy.git@DMCpyZEBRA
+pip install https://github.com/Jakob-Lass/DMCpy/raw/DMCpyZEBRA/dist/dmcpyzebra-1.0.0-py3-none-any.whl
 ```
 or 
 ```
-python3 -m pip install git+https://github.com/Jakob-Lass/DMCpy.git@DMCpyZEBRA
+python3 -m pip install https://github.com/Jakob-Lass/DMCpy/raw/DMCpyZEBRA/dist/dmcpyzebra-1.0.0-py3-none-any.whl 
 ```
 
 This will install the software within the environment allowing data analysis of the DMC and ZEBRA data structures. Further details are found in our [documentation](https://dmcpy.readthedocs.io/en/latest/introduction.html) 
