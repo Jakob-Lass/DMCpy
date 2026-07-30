@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 __author__ = 'Jakob Lass, Sam Moody, Øystein S. Fjellvåg'
 
 # installFolder = os.path.abspath(os.path.split(__file__)[0])
